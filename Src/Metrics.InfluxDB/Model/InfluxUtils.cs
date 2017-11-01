@@ -209,69 +209,44 @@ namespace Metrics.InfluxDB.Model
 		/// <param name="config">The configuration object to get the relevant fields to build the URI from.</param>
 		/// <returns>A new InfluxDB URI using the configuration specified in the <paramref name="config"/> parameter.</returns>
 		public static Uri FormatInfluxUri(this InfluxConfig config) {
-			return FormatInfluxUri(config.Hostname, config.Port, config.Database, config.Username, config.Password, config.RetentionPolicy, config.Precision);
-		}
-
-		/// <summary>
-		/// Creates a URI for the specified hostname and database. Uses no authentication, and optionally uses the default port (8086), retention policy (DEFAULT), and time precision (s).
-		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="database">The name of the database to write records to.</param>
-		/// <param name="retentionPolicy">The retention policy to use. Leave blank to use the server default of "DEFAULT".</param>
-		/// <param name="precision">The timestamp precision specifier used in the line protocol writes. Leave blank to use the default of <see cref="InfluxConfig.Default.Precision"/>.</param>
-		/// <returns>A new InfluxDB URI using the specified parameters.</returns>
-		public static Uri FormatInfluxUri(String host, String database, String retentionPolicy = null, InfluxPrecision? precision = null) {
-			return FormatInfluxUri(host, null, database, retentionPolicy, precision);
+			return FormatInfluxUri(config.Uri, config.Database, config.Username, config.Password, config.RetentionPolicy, config.Precision);
 		}
 
 		/// <summary>
 		/// Creates a URI for the specified hostname and database. Uses no authentication, and optionally uses the default retention policy (DEFAULT) and time precision (s).
 		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="port">The port number of the InfluxDB server. Set to zero to use the default of <see cref="InfluxConfig.Default.PortHttp"/>. This value is required for the UDP protocol.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
 		/// <param name="database">The name of the database to write records to.</param>
 		/// <param name="retentionPolicy">The retention policy to use. Leave blank to use the server default of "DEFAULT".</param>
 		/// <param name="precision">The timestamp precision specifier used in the line protocol writes. Leave blank to use the default of <see cref="InfluxConfig.Default.Precision"/>.</param>
 		/// <returns>A new InfluxDB URI using the specified parameters.</returns>
-		public static Uri FormatInfluxUri(String host, UInt16? port, String database, String retentionPolicy = null, InfluxPrecision? precision = null) {
-			return FormatInfluxUri(host, port, database, null, null, retentionPolicy, precision);
+		public static Uri FormatInfluxUri(Uri uri, String database, String retentionPolicy = null, InfluxPrecision? precision = null) {
+			return FormatInfluxUri(uri, database, null, null, retentionPolicy, precision);
 		}
 
 		/// <summary>
 		/// Creates a URI for the specified hostname and database using authentication. Optionally uses the default retention policy (DEFAULT) and time precision (s).
 		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="port">The port number of the InfluxDB server. Set to zero to use the default of <see cref="InfluxConfig.Default.PortHttp"/>. This value is required for the UDP protocol.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
 		/// <param name="database">The name of the database to write records to.</param>
 		/// <param name="username">The username to use to authenticate to the InfluxDB server. Leave blank to skip authentication.</param>
 		/// <param name="password">The password to use to authenticate to the InfluxDB server. Leave blank to skip authentication.</param>
 		/// <param name="retentionPolicy">The retention policy to use. Leave blank to use the server default of "DEFAULT".</param>
 		/// <param name="precision">The timestamp precision specifier used in the line protocol writes. Leave blank to use the default of <see cref="InfluxConfig.Default.Precision"/>.</param>
 		/// <returns>A new InfluxDB URI using the specified parameters.</returns>
-		public static Uri FormatInfluxUri(String host, UInt16? port, String database, String username, String password, String retentionPolicy = null, InfluxPrecision? precision = null) {
-			return FormatInfluxUri(null, host, port, database, username, password, retentionPolicy, precision);
-		}
-
-		/// <summary>
-		/// Creates a URI for the specified hostname and database using authentication. Optionally uses the default retention policy (DEFAULT) and time precision (s).
-		/// </summary>
-		/// <param name="scheme">The URI scheme type, ie. http, https, net.udp</param>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="port">The port number of the InfluxDB server. Set to zero to use the default of <see cref="InfluxConfig.Default.PortHttp"/>. This value is required for the UDP protocol.</param>
-		/// <param name="database">The name of the database to write records to.</param>
-		/// <param name="username">The username to use to authenticate to the InfluxDB server. Leave blank to skip authentication.</param>
-		/// <param name="password">The password to use to authenticate to the InfluxDB server. Leave blank to skip authentication.</param>
-		/// <param name="retentionPolicy">The retention policy to use. Leave blank to use the server default of "DEFAULT".</param>
-		/// <param name="precision">The timestamp precision specifier used in the line protocol writes. Leave blank to use the default of <see cref="InfluxConfig.Default.Precision"/>.</param>
-		/// <returns>A new InfluxDB URI using the specified parameters.</returns>
-		public static Uri FormatInfluxUri(String scheme, String host, UInt16? port, String database, String username, String password, String retentionPolicy = null, InfluxPrecision? precision = null) {
-			scheme = scheme ?? InfluxUtils.SchemeHttp;
-			if ((port ?? 0) == 0 && (scheme == SchemeHttp || scheme == SchemeHttps)) port = InfluxConfig.Default.PortHttp;
-			InfluxPrecision prec = precision ?? InfluxConfig.Default.Precision;
-			String uriString = $@"{scheme}://{host}:{port}/write?db={database}";
-			if (!String.IsNullOrWhiteSpace(username)) uriString += $@"&u={username}";
-			if (!String.IsNullOrWhiteSpace(password)) uriString += $@"&p={password}";
-			if (!String.IsNullOrWhiteSpace(retentionPolicy)) uriString += $@"&rp={retentionPolicy}";
+		public static Uri FormatInfluxUri(Uri uri, String database, String username, String password, String retentionPolicy = null, InfluxPrecision? precision = null)
+		{
+			var absUri = uri.AbsoluteUri;
+			var appendForwardSlash = absUri[absUri.Length - 1] != '/';
+			if (appendForwardSlash)
+			{
+				absUri += "/";
+			}
+			var prec = precision ?? InfluxConfig.Default.Precision;
+			var uriString = $@"{absUri}write?db={database}";
+			if (!string.IsNullOrWhiteSpace(username)) uriString += $@"&u={username}";
+			if (!string.IsNullOrWhiteSpace(password)) uriString += $@"&p={password}";
+			if (!string.IsNullOrWhiteSpace(retentionPolicy)) uriString += $@"&rp={retentionPolicy}";
 			if (prec != InfluxPrecision.Nanoseconds)  uriString += $@"&precision={prec.ToShortName()}"; // only need to specify precision if it's not nanoseconds (the InfluxDB default)
 			return new Uri(uriString);
 			//return new Uri($@"{scheme}://{host}:{port}/write?db={database}&u={username}&p={password}&rp={retentionPolicy}&precision={prec.ToShortName()}");

@@ -32,8 +32,8 @@ namespace Metrics.InfluxDB.Adapters
 		public InfluxdbHttpWriter(InfluxConfig config, Int32 batchSize = 0)
 			: base(config, batchSize) {
 
-			if (String.IsNullOrEmpty(config.Hostname))
-				throw new ArgumentNullException(nameof(config.Hostname));
+			if (config.Uri == null)
+				throw new ArgumentNullException(nameof(config.Uri));
 			if (String.IsNullOrEmpty(config.Database))
 				throw new ArgumentNullException(nameof(config.Database));
 
@@ -51,8 +51,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="config">The configuration object to get the relevant fields to build the HTTP URI from.</param>
 		/// <returns>A new InfluxDB URI using the configuration specified in the <paramref name="config"/> parameter.</returns>
 		protected static Uri FormatInfluxUri(InfluxConfig config) {
-			UInt16 port = (config.Port ?? 0) > 0 ? config.Port.Value : InfluxConfig.Default.PortHttp;
-			return InfluxUtils.FormatInfluxUri(InfluxUtils.SchemeHttp, config.Hostname, port, config.Database, config.Username, config.Password, config.RetentionPolicy, config.Precision);
+			return InfluxUtils.FormatInfluxUri(config.Uri, config.Database, config.Username, config.Password, config.RetentionPolicy, config.Precision);
 		}
 
 		/// <summary>

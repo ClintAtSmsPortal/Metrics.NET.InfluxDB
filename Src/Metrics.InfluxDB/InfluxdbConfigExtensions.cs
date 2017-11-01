@@ -30,72 +30,55 @@ namespace Metrics.InfluxDB
             return reports.WithInfluxDbHttp(new InfluxConfig(influxDbUri), interval, filter, configFunc);
         }
 
-        /// <summary>
-        /// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
-        /// </summary>
-        /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
-        /// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-        /// <param name="database">The database name to write values to.</param>
-        /// <param name="interval">Interval at which to run the report.</param>
-        /// <param name="filter">Only report metrics that match the filter.</param> 
-        /// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
-        /// <returns>The <see cref="MetricsReports"/> instance.</returns>
-        public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, String host, String database, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
+		/// <summary>
+		/// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
+		/// </summary>
+		/// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
+		/// <param name="database">The database name to write values to.</param>
+		/// <param name="interval">Interval at which to run the report.</param>
+		/// <param name="filter">Only report metrics that match the filter.</param> 
+		/// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
+		/// <returns>The <see cref="MetricsReports"/> instance.</returns>
+		public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, Uri uri, String database, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
         {
-            return reports.WithInfluxDbHttp(new InfluxConfig(host, database), interval, filter, configFunc);
+            return reports.WithInfluxDbHttp(new InfluxConfig(uri, database), interval, filter, configFunc);
         }
 
-        /// <summary>
-        /// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
-        /// </summary>
-        /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
-        /// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-        /// <param name="port">The port number to connect to on the InfluxDB server, or null to use the default port number.</param>
-        /// <param name="database">The database name to write values to.</param>
-        /// <param name="interval">Interval at which to run the report.</param>
-        /// <param name="filter">Only report metrics that match the filter.</param> 
-        /// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
-        /// <returns>The <see cref="MetricsReports"/> instance.</returns>
-        public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, String host, UInt16? port, String database, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
+		/// <summary>
+		/// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
+		/// </summary>
+		/// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
+		/// <param name="database">The database name to write values to.</param>
+		/// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
+		/// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
+		/// <param name="interval">Interval at which to run the report.</param>
+		/// <param name="filter">Only report metrics that match the filter.</param> 
+		/// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
+		/// <returns>The <see cref="MetricsReports"/> instance.</returns>
+		public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, Uri uri, String database, String retentionPolicy, InfluxPrecision? precision, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
         {
-            return reports.WithInfluxDbHttp(new InfluxConfig(host, port, database), interval, filter, configFunc);
+            return reports.WithInfluxDbHttp(new InfluxConfig(uri, database, retentionPolicy, precision), interval, filter, configFunc);
         }
 
-        /// <summary>
-        /// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
-        /// </summary>
-        /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
-        /// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-        /// <param name="database">The database name to write values to.</param>
-        /// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
-        /// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
-        /// <param name="interval">Interval at which to run the report.</param>
-        /// <param name="filter">Only report metrics that match the filter.</param> 
-        /// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
-        /// <returns>The <see cref="MetricsReports"/> instance.</returns>
-        public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, String host, String database, String retentionPolicy, InfluxPrecision? precision, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
+		/// <summary>
+		/// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
+		/// </summary>
+		/// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
+		/// <param name="database">The database name to write values to.</param>
+		/// <param name="username">The username to use to connect to the InfluxDB server, or null if authentication is not used.</param>
+		/// <param name="password">The password to use to connect to the InfluxDB server, or null if authentication is not used.</param>
+		/// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
+		/// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
+		/// <param name="interval">Interval at which to run the report.</param>
+		/// <param name="filter">Only report metrics that match the filter.</param> 
+		/// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
+		/// <returns>The <see cref="MetricsReports"/> instance.</returns>
+		public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, Uri uri, String database, String username, String password, String retentionPolicy, InfluxPrecision? precision, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
         {
-            return reports.WithInfluxDbHttp(new InfluxConfig(host, database, retentionPolicy, precision), interval, filter, configFunc);
-        }
-
-        /// <summary>
-        /// Schedules an <see cref="InfluxdbHttpReport"/> to be executed at a fixed interval.
-        /// </summary>
-        /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
-        /// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-        /// <param name="port">The port number to connect to on the InfluxDB server, or null to use the default port number.</param>
-        /// <param name="database">The database name to write values to.</param>
-        /// <param name="username">The username to use to connect to the InfluxDB server, or null if authentication is not used.</param>
-        /// <param name="password">The password to use to connect to the InfluxDB server, or null if authentication is not used.</param>
-        /// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
-        /// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
-        /// <param name="interval">Interval at which to run the report.</param>
-        /// <param name="filter">Only report metrics that match the filter.</param> 
-        /// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
-        /// <returns>The <see cref="MetricsReports"/> instance.</returns>
-        public static MetricsReports WithInfluxDbHttp(this MetricsReports reports, String host, UInt16? port, String database, String username, String password, String retentionPolicy, InfluxPrecision? precision, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
-        {
-            return reports.WithInfluxDbHttp(new InfluxConfig(host, port, database, username, password, retentionPolicy, precision), interval, filter, configFunc);
+            return reports.WithInfluxDbHttp(new InfluxConfig(uri, database, username, password, retentionPolicy, precision), interval, filter, configFunc);
         }
 
         /// <summary>
@@ -137,22 +120,6 @@ namespace Metrics.InfluxDB
         /// This reporter writes metric values to the InfluxDB database using the UDP transport.
         /// </summary>
         /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
-        /// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-        /// <param name="port">The port number to connect to on the InfluxDB server, this is required for UDP connections.</param>
-        /// <param name="interval">Interval at which to run the report.</param>
-        /// <param name="filter">Only report metrics that match the filter.</param> 
-        /// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
-        /// <returns>The <see cref="MetricsReports"/> instance.</returns>
-        public static MetricsReports WithInfluxDbUdp(this MetricsReports reports, String host, UInt16 port, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
-        {
-            return reports.WithInfluxDbUdp(new InfluxConfig(host, port, null), interval, filter, configFunc);
-        }
-
-        /// <summary>
-        /// Schedules an <see cref="InfluxdbUdpReport"/> to be executed at a fixed interval.
-        /// This reporter writes metric values to the InfluxDB database using the UDP transport.
-        /// </summary>
-        /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
         /// <param name="config">The InfluxDB reporter configuration.</param>
         /// <param name="interval">Interval at which to run the report.</param>
         /// <param name="filter">Only report metrics that match the filter.</param> 
@@ -165,29 +132,28 @@ namespace Metrics.InfluxDB
             return reports.WithReport(new InfluxdbUdpReport(conf), interval, filter);
         }
 
-        #endregion
+		#endregion
 
-        #region JSON Reporter (pre InfluxDB v0.9.1 only)
+		#region JSON Reporter (pre InfluxDB v0.9.1 only)
 
-        /// <summary>
-        /// Schedules an <see cref="InfluxdbJsonReport"/> to be executed at a fixed interval using the deprecated JSON protocol.
-        /// NOTE: It is recommended to NOT use the JSON reporter because of performance issues, and support for JSON has been
-        /// removed from InfluxDB in versions later than v0.9.1. It is recommended to use the HTTP or UDP reporters instead.
-        /// See for more information: https://docs.influxdata.com/influxdb/v0.13/write_protocols/json/
-        /// </summary>
-        /// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
-        /// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-        /// <param name="port">The port number to connect to on the InfluxDB server, or null to use the default port number.</param>
-        /// <param name="database">The database name to write values to.</param>
-        /// <param name="username">The username to use to connect to the InfluxDB server, or null if authentication is not used.</param>
-        /// <param name="password">The password to use to connect to the InfluxDB server, or null if authentication is not used.</param>
-        /// <param name="interval">Interval at which to run the report.</param>
-        /// <param name="filter">Only report metrics that match the filter.</param> 
-        /// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
-        /// <returns>The <see cref="MetricsReports"/> instance.</returns>
-        public static MetricsReports WithInfluxDbJson(this MetricsReports reports, String host, UInt16? port, String database, String username, String password, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
+		/// <summary>
+		/// Schedules an <see cref="InfluxdbJsonReport"/> to be executed at a fixed interval using the deprecated JSON protocol.
+		/// NOTE: It is recommended to NOT use the JSON reporter because of performance issues, and support for JSON has been
+		/// removed from InfluxDB in versions later than v0.9.1. It is recommended to use the HTTP or UDP reporters instead.
+		/// See for more information: https://docs.influxdata.com/influxdb/v0.13/write_protocols/json/
+		/// </summary>
+		/// <param name="reports">The <see cref="MetricsReports"/> instance.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
+		/// <param name="database">The database name to write values to.</param>
+		/// <param name="username">The username to use to connect to the InfluxDB server, or null if authentication is not used.</param>
+		/// <param name="password">The password to use to connect to the InfluxDB server, or null if authentication is not used.</param>
+		/// <param name="interval">Interval at which to run the report.</param>
+		/// <param name="filter">Only report metrics that match the filter.</param> 
+		/// <param name="configFunc">A lambda expression that allows further configuration of the InfluxDB reporter using fluent syntax.</param>
+		/// <returns>The <see cref="MetricsReports"/> instance.</returns>
+		public static MetricsReports WithInfluxDbJson(this MetricsReports reports, Uri uri, String database, String username, String password, TimeSpan interval, MetricsFilter filter = null, Action<InfluxConfig> configFunc = null)
         {
-            return reports.WithInfluxDbJson(new InfluxConfig(host, port, database, username, password, null, InfluxPrecision.Seconds), interval, filter, configFunc);
+            return reports.WithInfluxDbJson(new InfluxConfig(uri, database, username, password, null, InfluxPrecision.Seconds), interval, filter, configFunc);
         }
 
         /// <summary>

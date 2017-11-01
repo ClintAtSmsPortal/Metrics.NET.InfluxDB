@@ -5,7 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using Metrics.Json;
-using Metrics.Logging;
 using Metrics.InfluxDB.Model;
 
 namespace Metrics.InfluxDB.Adapters
@@ -49,7 +48,7 @@ namespace Metrics.InfluxDB.Adapters
 				//log.Warn($"InfluxDB timestamp precision '{config.Precision}' is not supported by the JSON protocol, defaulting to {InfluxPrecision.Seconds}.");
 				throw new ArgumentException($"InfluxDB timestamp precision '{config.Precision}' is not supported by the JSON protocol, which only supports {InfluxPrecision.Seconds} precision.", nameof(config.Precision));
 
-			this.influxDbUri = FormatInfluxUri(config);
+			this.influxDbUri = FormatInfluxUri();
 			if (influxDbUri == null)
 				throw new ArgumentNullException(nameof(influxDbUri));
 			if (influxDbUri.Scheme != Uri.UriSchemeHttp && influxDbUri.Scheme != Uri.UriSchemeHttps)
@@ -60,11 +59,16 @@ namespace Metrics.InfluxDB.Adapters
 		/// <summary>
 		/// Creates an HTTP JSON URI for InfluxDB using the values specified in the <see cref="InfluxConfig"/> object.
 		/// </summary>
-		/// <param name="config">The configuration object to get the relevant fields to build the HTTP URI from.</param>
-		/// <returns>A new InfluxDB JSON URI using the configuration specified in the <paramref name="config"/> parameter.</returns>
-		protected Uri FormatInfluxUri(InfluxConfig config) {
-			InfluxPrecision prec = config.Precision ?? InfluxConfig.Default.Precision;
-			return new Uri($@"http://{config.Hostname}:{config.Port}/db/{config.Database}/series?u={config.Username}&p={config.Password}&time_precision={prec.ToShortName()}");
+		/// <returns>A new InfluxDB JSON URI using the configuration specified in the <see cref="InfluxConfig"/> object.</returns>
+		protected Uri FormatInfluxUri() {
+			var prec = config.Precision ?? InfluxConfig.Default.Precision;
+			var absUri = config.Uri.AbsoluteUri;
+			var appendForwardSlash = absUri[absUri.Length - 1] != '/';
+			if (appendForwardSlash)
+			{
+				absUri += "/";
+			}
+			return new Uri($@"{absUri}db/{config.Database}/series?u={config.Username}&p={config.Password}&time_precision={prec.ToShortName()}");
 		}
 
 

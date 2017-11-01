@@ -38,15 +38,9 @@ namespace Metrics.InfluxDB.Model
 		#region InfluxDB Server Connection Settings
 
 		/// <summary>
-		/// The hostname of the InfluxDB server.
+		/// The URI of the InfluxDB server, including any query string parameters.
 		/// </summary>
-		public String Hostname { get; set; }
-
-		/// <summary>
-		/// The port of the InfluxDB server. Set to null to use the default
-		/// port for the chosen transport and protocol, if there is one.
-		/// </summary>
-		public UInt16? Port { get; set; }
+		public Uri Uri { get; set; }
 
 		/// <summary>
 		/// The name of the database on the InfluxDB server to write the datapoints to.
@@ -110,68 +104,44 @@ namespace Metrics.InfluxDB.Model
 		/// <summary>
 		/// Creates a new InfluxDB configuration object with the specified hostname and database.
 		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
 		/// <param name="database">The database name to write values to. This should be null if using UDP since the database is defined in the UDP endpoint configuration on the InfluxDB server.</param>
-		public InfluxConfig(String host, String database)
-			: this(host, null, database) {
+		public InfluxConfig(Uri uri, String database)
+			: this(uri, database, null) {
 		}
 
 		/// <summary>
 		/// Creates a new InfluxDB configuration object with the specified hostname, database, and precision.
 		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
 		/// <param name="database">The database name to write values to. This should be null if using UDP since the database is defined in the UDP endpoint configuration on the InfluxDB server.</param>
 		/// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
-		public InfluxConfig(String host, String database, InfluxPrecision? precision)
-			: this(host, null, database, null, precision) {
+		public InfluxConfig(Uri uri, String database, InfluxPrecision? precision)
+			: this(uri, database, null, precision) {
 		}
 
 		/// <summary>
 		/// Creates a new InfluxDB configuration object with the specified hostname, database, retention policy, and precision.
 		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
 		/// <param name="database">The database name to write values to. This should be null if using UDP since the database is defined in the UDP endpoint configuration on the InfluxDB server.</param>
 		/// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
 		/// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
-		public InfluxConfig(String host, String database, String retentionPolicy, InfluxPrecision? precision)
-			: this(host, null, database, retentionPolicy, precision) {
-		}
-
-		/// <summary>
-		/// Creates a new InfluxDB configuration object with the specified hostname, port, and database.
-		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="port">The port number to connect to on the InfluxDB server, or null to use the default port number.</param>
-		/// <param name="database">The database name to write values to. This should be null if using UDP since the database is defined in the UDP endpoint configuration on the InfluxDB server.</param>
-		public InfluxConfig(String host, UInt16? port, String database)
-			: this(host, port, database, null, null) {
-		}
-
-		/// <summary>
-		/// Creates a new InfluxDB configuration object with the specified hostname, port, database, retention policy, and precision.
-		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="port">The port number to connect to on the InfluxDB server, or null to use the default port number.</param>
-		/// <param name="database">The database name to write values to. This should be null if using UDP since the database is defined in the UDP endpoint configuration on the InfluxDB server.</param>
-		/// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
-		/// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
-		public InfluxConfig(String host, UInt16? port, String database, String retentionPolicy, InfluxPrecision? precision)
-			: this(host, port, database, null, null, retentionPolicy, precision) {
+		public InfluxConfig(Uri uri, String database, String retentionPolicy, InfluxPrecision? precision)
+			: this(uri, database, null, null, retentionPolicy, precision) {
 		}
 
 		/// <summary>
 		/// Creates a new InfluxDB configuration object with the specified hostname, port, database, retention policy, precision, and credentials.
 		/// </summary>
-		/// <param name="host">The hostname or IP address of the InfluxDB server.</param>
-		/// <param name="port">The port number to connect to on the InfluxDB server, or null to use the default port number.</param>
+		/// <param name="uri">The URI of the InfluxDB server, including any query string parameters.</param>
 		/// <param name="database">The database name to write values to. This should be null if using UDP since the database is defined in the UDP endpoint configuration on the InfluxDB server.</param>
 		/// <param name="username">The username to use to connect to the InfluxDB server, or null if authentication is not used.</param>
 		/// <param name="password">The password to use to connect to the InfluxDB server, or null if authentication is not used.</param>
 		/// <param name="retentionPolicy">The retention policy to use when writing datapoints to the InfluxDB database, or null to use the database's default retention policy.</param>
 		/// <param name="precision">The precision of the timestamp value in the line protocol syntax.</param>
-		public InfluxConfig(String host, UInt16? port, String database, String username, String password, String retentionPolicy, InfluxPrecision? precision) {
-			this.Hostname = host;
-			this.Port = port;
+		public InfluxConfig(Uri uri, String database, String username, String password, String retentionPolicy, InfluxPrecision? precision) {
+			this.Uri = uri;
 			this.Database = database;
 			this.Username = username;
 			this.Password = password;
@@ -186,8 +156,7 @@ namespace Metrics.InfluxDB.Model
 		public InfluxConfig(Uri influxDbUri) {
 			if (influxDbUri == null)
 				throw new ArgumentNullException(nameof(influxDbUri));
-			Hostname = influxDbUri.Host;
-			Port = (UInt16)influxDbUri.Port;
+			Uri = influxDbUri;
 			var queryKvps = influxDbUri.ParseQueryString();
 			foreach (var kvp in queryKvps.Where(k => !String.IsNullOrEmpty(k.Value))) {
 				if (kvp.Key.ToLower() == "db") Database = kvp.Value;

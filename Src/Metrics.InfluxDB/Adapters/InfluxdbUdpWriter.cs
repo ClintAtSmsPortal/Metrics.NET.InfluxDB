@@ -28,10 +28,10 @@ namespace Metrics.InfluxDB.Adapters
 		public InfluxdbUdpWriter(InfluxConfig config, Int32 batchSize = 0)
 			: base(config, batchSize) {
 
-			if (String.IsNullOrEmpty(config.Hostname))
-				throw new ArgumentNullException(nameof(config.Hostname));
-			if ((config.Port ?? 0) == 0)
-				throw new ArgumentNullException(nameof(config.Port), "Port is required for UDP connections.");
+			if (config.Uri == null)
+				throw new ArgumentNullException(nameof(config.Uri));
+			if (config.Uri.Port == 0)
+				throw new ArgumentNullException(nameof(config.Uri.Port), "Port is required for UDP connections.");
 			if ((config.Precision ?? InfluxPrecision.Nanoseconds) != InfluxPrecision.Nanoseconds)
 				throw new ArgumentException($"Timestamp precision for UDP connections must be Nanoseconds. Actual: {config.Precision}", nameof(config.Precision));
 		}
@@ -57,12 +57,12 @@ namespace Metrics.InfluxDB.Adapters
 		protected override Byte[] WriteToTransport(Byte[] bytes) {
 			try {
 				using (var client = new UdpClient()) {
-					int result = client.Send(bytes, bytes.Length, config.Hostname, config.Port.Value);
+					int result = client.Send(bytes, bytes.Length, config.Uri.Host, config.Uri.Port);
 					return Encoding.UTF8.GetBytes(result.ToString());
 				}
 			} catch (Exception ex) {
 				String firstNLines = "\n" + String.Join("\n", Encoding.UTF8.GetString(bytes).Split('\n').Take(5)) + "\n";
-				MetricsErrorHandler.Handle(ex, $"Error while uploading {Batch.Count} measurements ({formatSize(bytes.Length)}) to InfluxDB over UDP [net.udp://{config.Hostname}:{config.Port.Value}/] - Ensure that the message size is less than the UDP send buffer size (usually 8-64KB), and reduce the BatchSize on the InfluxdbWriter if necessary. - First 5 lines: {firstNLines}");
+				MetricsErrorHandler.Handle(ex, $"Error while uploading {Batch.Count} measurements ({formatSize(bytes.Length)}) to InfluxDB over UDP [net.udp://{config.Uri.Host}:{config.Uri.Port}/] - Ensure that the message size is less than the UDP send buffer size (usually 8-64KB), and reduce the BatchSize on the InfluxdbWriter if necessary. - First 5 lines: {firstNLines}");
 				return Encoding.UTF8.GetBytes(0.ToString());
 			}
 		}

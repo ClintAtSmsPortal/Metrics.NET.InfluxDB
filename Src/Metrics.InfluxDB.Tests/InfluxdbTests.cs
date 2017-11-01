@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Metrics.InfluxDB;
 using Metrics.InfluxDB.Model;
 using FluentAssertions;
 using Xunit;
@@ -11,6 +10,7 @@ namespace Metrics.InfluxDB.Tests
 {
 	public class InfluxdbTests
 	{
+		private readonly Uri mockUri = new Uri("https://localhost");
 
 		[Fact]
 		public void InfluxTag_CanParse_InvalidValueReturnsEmpty() {
@@ -153,7 +153,7 @@ namespace Metrics.InfluxDB.Tests
 
 		[Fact]
 		public void InfluxReport_CanAddRecords_ForGauge() {
-			var config = new InfluxConfig("localhost", "testdb");
+			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
@@ -174,7 +174,7 @@ namespace Metrics.InfluxDB.Tests
 
 		[Fact]
 		public void InfluxReport_CanAddRecords_ForCounter() {
-			var config = new InfluxConfig("localhost", "testdb");
+			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
@@ -204,7 +204,7 @@ namespace Metrics.InfluxDB.Tests
 
 		[Fact]
 		public void InfluxReport_CanAddRecords_ForMeter() {
-			var config = new InfluxConfig("localhost", "testdb");
+			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
@@ -234,7 +234,7 @@ namespace Metrics.InfluxDB.Tests
 
 		[Fact]
 		public void InfluxReport_CanAddRecords_ForHistogram() {
-			var config = new InfluxConfig("localhost", "testdb");
+			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
@@ -263,7 +263,7 @@ namespace Metrics.InfluxDB.Tests
 
 		[Fact]
 		public void InfluxReport_CanAddRecords_ForTimer() {
-			var config = new InfluxConfig("localhost", "testdb");
+			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
@@ -292,7 +292,7 @@ namespace Metrics.InfluxDB.Tests
 
 		[Fact]
 		public void InfluxReport_CanAddRecords_ForHealthCheck() {
-			var config = new InfluxConfig("localhost", "testdb");
+			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
