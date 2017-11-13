@@ -48,6 +48,11 @@ namespace Metrics.InfluxDB.Model
 		public String Database { get; set; }
 
 		/// <summary>
+		/// True if the HealthReports should not be written to the InfluxDB server; otherwise, false.
+		/// </summary>
+		public bool DisableSendingHealthReport { get; set; }
+
+		/// <summary>
 		/// The username used to authenticate with the InfluxDB server, if authentication is required.
 		/// </summary>
 		public String Username { get; set; }

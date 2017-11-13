@@ -161,10 +161,13 @@ namespace Metrics.InfluxDB
 		}
 
 		///<inheritdoc/>
-		protected override void ReportHealth(HealthStatus status) {
-			writer.Write(converter.GetRecords(status).Select(r => formatter?.FormatRecord(r) ?? r));
+		protected override void ReportHealth(HealthStatus status)
+		{
+			if (!Config.DisableSendingHealthReport)
+			{
+				writer.Write(converter.GetRecords(status).Select(r => formatter?.FormatRecord(r) ?? r));
+			}
 		}
-
 	}
 
 	/// <summary>
