@@ -63,17 +63,17 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="unit">The metric unit.</param>
 		/// <param name="value">The metric value object.</param>
 		/// <returns>A list of <see cref="InfluxRecord"/> instances for the specified metric value.</returns>
-		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, Unit unit, CounterValue value) {
-			yield return GetRecord(name, tags, new[] {
-				new InfluxField("Count", value.Count),
-			});
+		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, Unit unit, CounterValue value)
+		{
+			var fields = new List<InfluxField>();
+			fields.Add(new InfluxField("Count", value.Count));
 
-			foreach (var i in value.Items) {
-				yield return GetRecord(name, i.Item, tags, new[] {
-					new InfluxField("Count",   i.Count),
-					new InfluxField("Percent", i.Percent),
-				});
+			foreach (var i in value.Items)
+			{
+				fields.Add(new InfluxField(i.Item + "_Count", i.Count));
+				fields.Add(new InfluxField(i.Item + "_Percent", i.Percent));
 			}
+			yield return GetRecord(name, tags, fields);
 		}
 
 		/// <summary>
@@ -87,24 +87,23 @@ namespace Metrics.InfluxDB.Adapters
 		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, Unit unit, MeterValue value) {
 			if (value == null) throw new ArgumentNullException(nameof(value));
 
-			yield return GetRecord(name, tags, new[] {
-				new InfluxField("Count",       value.Count),
-				new InfluxField("Mean Rate",   value.MeanRate),
-				new InfluxField("1 Min Rate",  value.OneMinuteRate),
-				new InfluxField("5 Min Rate",  value.FiveMinuteRate),
-				new InfluxField("15 Min Rate", value.FifteenMinuteRate),
-			});
+			var fields = new List<InfluxField>();
+			fields.Add(new InfluxField("Count", value.Count));
+			fields.Add(new InfluxField("Mean Rate", value.MeanRate));
+			fields.Add(new InfluxField("1 Min Rate", value.OneMinuteRate));
+			fields.Add(new InfluxField("5 Min Rate", value.FiveMinuteRate));
+			fields.Add(new InfluxField("15 Min Rate", value.FifteenMinuteRate));
 
-			foreach (var i in value.Items) {
-				yield return GetRecord(name, i.Item, tags, new[] {
-					new InfluxField("Count",       i.Value.Count),
-					new InfluxField("Percent",     i.Percent),
-					new InfluxField("Mean Rate",   i.Value.MeanRate),
-					new InfluxField("1 Min Rate",  i.Value.OneMinuteRate),
-					new InfluxField("5 Min Rate",  i.Value.FiveMinuteRate),
-					new InfluxField("15 Min Rate", i.Value.FifteenMinuteRate),
-				});
+			foreach (var i in value.Items)
+			{
+				fields.Add(new InfluxField(i.Item + "_Count", i.Value.Count));
+				fields.Add(new InfluxField(i.Item + "_Percent", i.Percent));
+				fields.Add(new InfluxField(i.Item + "_Mean Rate", i.Value.MeanRate));
+				fields.Add(new InfluxField(i.Item + "_1 Min Rate", i.Value.OneMinuteRate));
+				fields.Add(new InfluxField(i.Item + "_5 Min Rate", i.Value.FiveMinuteRate));
+				fields.Add(new InfluxField(i.Item + "_15 Min Rate", i.Value.FifteenMinuteRate));
 			}
+			yield return GetRecord(name, tags, fields);
 		}
 
 		/// <summary>
@@ -117,7 +116,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <returns>A list of <see cref="InfluxRecord"/> instances for the specified metric value.</returns>
 		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, Unit unit, HistogramValue value) {
 			if (value == null) throw new ArgumentNullException(nameof(value));
-
+			
 			yield return GetRecord(name, tags, new[] {
 				new InfluxField("Count",            value.Count),
 				new InfluxField("Last",             value.LastValue),
@@ -150,46 +149,44 @@ namespace Metrics.InfluxDB.Adapters
 		/// <returns>A list of <see cref="InfluxRecord"/> instances for the specified metric value.</returns>
 		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, Unit unit, TimerValue value) {
 			if (value == null) throw new ArgumentNullException(nameof(value));
-
-			yield return GetRecord(name, tags, new[] {
-				new InfluxField("Active Sessions",  value.ActiveSessions),
-				new InfluxField("Total Time",       value.TotalTime),
-				new InfluxField("Count",            value.Rate.Count),
-				new InfluxField("Mean Rate",        value.Rate.MeanRate),
-				new InfluxField("1 Min Rate",       value.Rate.OneMinuteRate),
-				new InfluxField("5 Min Rate",       value.Rate.FiveMinuteRate),
-				new InfluxField("15 Min Rate",      value.Rate.FifteenMinuteRate),
-				new InfluxField("Last",             value.Histogram.LastValue),
-				new InfluxField("Min",              value.Histogram.Min),
-				new InfluxField("Mean",             value.Histogram.Mean),
-				new InfluxField("Max",              value.Histogram.Max),
-				new InfluxField("StdDev",           value.Histogram.StdDev),
-				new InfluxField("Median",           value.Histogram.Median),
-				new InfluxField("Sample Size",      value.Histogram.SampleSize),
-				new InfluxField("Percentile 75%",   value.Histogram.Percentile75),
-				new InfluxField("Percentile 95%",   value.Histogram.Percentile95),
-				new InfluxField("Percentile 98%",   value.Histogram.Percentile98),
-				new InfluxField("Percentile 99%",   value.Histogram.Percentile99),
-				new InfluxField("Percentile 99.9%", value.Histogram.Percentile999),
-				
-				// ignored histogram values
-				//new InfluxField("Last User Value",  value.Histogram.LastUserValue),
-				//new InfluxField("Min User Value",   value.Histogram.MinUserValue),
-				//new InfluxField("Max User Value",   value.Histogram.MaxUserValue),
-			});
-
+			
+			var fields = new List<InfluxField>();
+			fields.Add(new InfluxField("Active Sessions", value.ActiveSessions));
+			fields.Add(new InfluxField("Total Time", value.TotalTime));
+			fields.Add(new InfluxField("Count", value.Rate.Count));
+			fields.Add(new InfluxField("Mean Rate", value.Rate.MeanRate));
+			fields.Add(new InfluxField("1 Min Rate", value.Rate.OneMinuteRate));
+			fields.Add(new InfluxField("5 Min Rate", value.Rate.FiveMinuteRate));
+			fields.Add(new InfluxField("15 Min Rate", value.Rate.FifteenMinuteRate));
+			fields.Add(new InfluxField("Last", value.Histogram.LastValue));
+			fields.Add(new InfluxField("Min", value.Histogram.Min));
+			fields.Add(new InfluxField("Mean", value.Histogram.Mean));
+			fields.Add(new InfluxField("Max", value.Histogram.Max));
+			fields.Add(new InfluxField("StdDev", value.Histogram.StdDev));
+			fields.Add(new InfluxField("Median", value.Histogram.Median));
+			fields.Add(new InfluxField("Sample Size", value.Histogram.SampleSize));
+			fields.Add(new InfluxField("Percentile 75%", value.Histogram.Percentile75));
+			fields.Add(new InfluxField("Percentile 95%", value.Histogram.Percentile95));
+			fields.Add(new InfluxField("Percentile 98%", value.Histogram.Percentile98));
+			fields.Add(new InfluxField("Percentile 99%", value.Histogram.Percentile99));
+			fields.Add(new InfluxField("Percentile 99.9%", value.Histogram.Percentile999));
+			// ignored histogram values
+			//fields.Add(new InfluxField("Last User Value",  value.Histogram.LastUserValue));
+			//fields.Add(new InfluxField("Min User Value",   value.Histogram.MinUserValue));
+			//fields.Add(new InfluxField("Max User Value",   value.Histogram.MaxUserValue));
+			
 			// NOTE: I'm not sure if this is needed, it appears the timer only adds set item values
 			// to the histogram and not to the meter. I'm not sure if this is a bug or by design.
-			foreach (var i in value.Rate.Items) {
-				yield return GetRecord(name, i.Item, tags, new[] {
-					new InfluxField("Count",       i.Value.Count),
-					new InfluxField("Percent",     i.Percent),
-					new InfluxField("Mean Rate",   i.Value.MeanRate),
-					new InfluxField("1 Min Rate",  i.Value.OneMinuteRate),
-					new InfluxField("5 Min Rate",  i.Value.FiveMinuteRate),
-					new InfluxField("15 Min Rate", i.Value.FifteenMinuteRate),
-				});
+			foreach (var i in value.Rate.Items)
+			{
+				fields.Add(new InfluxField(i.Item + "_Count", i.Value.Count));
+				fields.Add(new InfluxField(i.Item + "_Percent", i.Percent));
+				fields.Add(new InfluxField(i.Item + "_Mean Rate", i.Value.MeanRate));
+				fields.Add(new InfluxField(i.Item + "_1 Min Rate", i.Value.OneMinuteRate));
+				fields.Add(new InfluxField(i.Item + "_5 Min Rate", i.Value.FiveMinuteRate));
+				fields.Add(new InfluxField(i.Item + "_15 Min Rate", i.Value.FifteenMinuteRate));
 			}
+			yield return GetRecord(name, tags, fields);
 		}
 
 		/// <summary>
