@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using Metrics.Json;
+using Metrics.MetricData;
 using Metrics.Reporters;
 using Metrics.Utils;
 
@@ -210,6 +211,32 @@ namespace Metrics.InfluxDB
 				Value(value.Histogram.Percentile999),
 				Value(value.Histogram.SampleSize)
 			});
+		}
+
+		///<inheritdoc/>
+		protected override void ReportEvent(string name, EventValue value, MetricTags tags)
+		{
+			var itemColumns = new List<string>();
+			foreach (var evntArgs in value.EventsCopy)
+			{
+				itemColumns.Add("Timestamp");
+				foreach (var kvp in evntArgs.Fields)
+				{
+					itemColumns.Add(kvp.Key);
+				}
+			}
+
+			var itemValues = new List<JsonValue>();
+			foreach (var evntArgs in value.EventsCopy)
+			{
+				itemValues.Add(Value(evntArgs.Timestamp.ToString()));
+				foreach (var kvp in evntArgs.Fields)
+				{
+					itemValues.Add(Value(kvp.Value.ToString()));
+				}
+			}
+
+			Pack(name, itemColumns, itemValues);
 		}
 
 		///<inheritdoc/>

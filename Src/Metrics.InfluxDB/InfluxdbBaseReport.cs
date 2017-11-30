@@ -68,10 +68,10 @@ namespace Metrics.InfluxDB
 		/// </summary>
 		/// <param name="config">The InfluxDB configuration object.</param>
 		public InfluxdbBaseReport(InfluxConfig config = null) {
-			this.config    = GetDefaultConfig(config) ?? new InfluxConfig();
+			this.config	= GetDefaultConfig(config) ?? new InfluxConfig();
 			this.converter = config.Converter;
 			this.formatter = config.Formatter;
-			this.writer    = config.Writer;
+			this.writer	= config.Writer;
 			ValidateConfig(this.config);
 		}
 
@@ -97,7 +97,7 @@ namespace Metrics.InfluxDB
 			if (config.Formatter == null)
 				throw new ArgumentNullException(nameof(config.Formatter), $"InfluxDB configuration invalid: {nameof(config.Formatter)} cannot be null");
 			if (config.Writer == null)
-				throw new ArgumentNullException(nameof(config.Writer),    $"InfluxDB configuration invalid: {nameof(config.Writer)} cannot be null");
+				throw new ArgumentNullException(nameof(config.Writer),	$"InfluxDB configuration invalid: {nameof(config.Writer)} cannot be null");
 
 			//log.Debug($"Initialized InfluxDB reporter. Writer: {config.Writer.GetType().Name} Host: {config.Hostname}:{config.Port} Database: {config.Database}");
 		}
@@ -156,8 +156,15 @@ namespace Metrics.InfluxDB
 		}
 
 		///<inheritdoc/>
-		protected override void ReportTimer(String name, TimerValue value, Unit unit, TimeUnit rateUnit, TimeUnit durationUnit, MetricTags tags) {
+		protected override void ReportTimer(String name, TimerValue value, Unit unit, TimeUnit rateUnit, TimeUnit durationUnit, MetricTags tags)
+		{
 			writer.Write(converter.GetRecords(name, tags, unit, value).Select(r => formatter?.FormatRecord(r) ?? r));
+		}
+
+		///<inheritdoc/>
+		protected override void ReportEvent(String name, EventValue value, MetricTags tags)
+		{
+			writer.Write(converter.GetRecords(name, tags, value).Select(r => formatter?.FormatRecord(r) ?? r));
 		}
 
 		///<inheritdoc/>
@@ -201,7 +208,7 @@ namespace Metrics.InfluxDB
 			var config = base.GetDefaultConfig(defaultConfig) ?? new InfluxConfig();
 			config.Converter = config.Converter ?? new DefaultConverter();
 			config.Formatter = config.Formatter ?? new DefaultFormatter();
-			//config.Writer    = config.Writer    ?? new InfluxdbHttpWriter(config);
+			//config.Writer	= config.Writer	?? new InfluxdbHttpWriter(config);
 			return config;
 
 		}

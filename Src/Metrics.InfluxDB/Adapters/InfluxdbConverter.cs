@@ -67,7 +67,7 @@ namespace Metrics.InfluxDB.Adapters
 		{
 			var fields = new List<InfluxField>();
 			fields.Add(new InfluxField("Count", value.Count));
-
+			
 			foreach (var i in value.Items)
 			{
 				fields.Add(new InfluxField(i.Item + "_Count", i.Count));
@@ -118,14 +118,14 @@ namespace Metrics.InfluxDB.Adapters
 			if (value == null) throw new ArgumentNullException(nameof(value));
 			
 			yield return GetRecord(name, tags, new[] {
-				new InfluxField("Count",            value.Count),
-				new InfluxField("Last",             value.LastValue),
-				new InfluxField("Min",              value.Min),
-				new InfluxField("Mean",             value.Mean),
-				new InfluxField("Max",              value.Max),
-				new InfluxField("StdDev",           value.StdDev),
-				new InfluxField("Median",           value.Median),
-				new InfluxField("Sample Size",      value.SampleSize),
+				new InfluxField("Count",			value.Count),
+				new InfluxField("Last",			 value.LastValue),
+				new InfluxField("Min",			  value.Min),
+				new InfluxField("Mean",			 value.Mean),
+				new InfluxField("Max",			  value.Max),
+				new InfluxField("StdDev",		   value.StdDev),
+				new InfluxField("Median",		   value.Median),
+				new InfluxField("Sample Size",	  value.SampleSize),
 				new InfluxField("Percentile 75%",   value.Percentile75),
 				new InfluxField("Percentile 95%",   value.Percentile95),
 				new InfluxField("Percentile 98%",   value.Percentile98),
@@ -208,7 +208,25 @@ namespace Metrics.InfluxDB.Adapters
 			}
 		}
 
-
+		/// <summary>
+		/// Creates a new <see cref="InfluxRecord"/> instance for the event value.
+		/// </summary>
+		/// <param name="name">The measurement name.</param>
+		/// <param name="tags">Any additional tags to add to the <see cref="InfluxRecord"/>, these tags overwrite any global tags with the same name.</param>
+		/// <param name="value">The metric value object.</param>
+		/// <returns>A list of <see cref="InfluxRecord"/> instances for the specified metric value.</returns>
+		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, EventValue value)
+		{
+			var fields = new List<InfluxField>();
+			foreach (var evntArgs in value.EventsCopy)
+			{
+				foreach (var kvp in evntArgs.Fields)
+				{
+					fields.Add(new InfluxField(kvp.Key, kvp.Value.ToString()));
+				}
+				yield return GetRecord(name, tags, fields, evntArgs.Timestamp);
+			}
+		}
 
 		/// <summary>
 		/// Creates a new <see cref="InfluxRecord"/> from the specified name, tags, and fields.
@@ -231,9 +249,25 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="tags">The optional tags to associate with this record.</param>
 		/// <param name="fields">The <see cref="InfluxField"/> values for the output fields.</param>
 		/// <returns>A new <see cref="InfluxRecord"/> from the specified name, tags, and fields.</returns>
-		public InfluxRecord GetRecord(String name, String itemName, MetricTags tags, IEnumerable<InfluxField> fields) {
+		public InfluxRecord GetRecord(String name, String itemName, MetricTags tags, IEnumerable<InfluxField> fields)
+		{
 			var jtags = InfluxUtils.JoinTags(itemName, GlobalTags, tags); // global tags must be first so they can get overridden
 			var record = new InfluxRecord(name, jtags, fields, Timestamp);
+			return record;
+		}
+
+		/// <summary>
+		/// Creates a new <see cref="InfluxRecord"/> from the specified name, item name, tags, fields, and timestamp.
+		/// </summary>
+		/// <param name="name">The measurement or series name. This value is required and cannot be null or empty.</param>
+		/// <param name="tags">The optional tags to associate with this record.</param>
+		/// <param name="fields">The <see cref="InfluxField"/> values for the output fields.</param>
+		/// <param name="timestamp">The timestamp for the <see cref="InfluxRecord"/>.</param>
+		/// <returns>A new <see cref="InfluxRecord"/> from the specified name, tags, and fields.</returns>
+		public InfluxRecord GetRecord(String name, MetricTags tags, IEnumerable<InfluxField> fields, DateTime timestamp)
+		{
+			var jtags = InfluxUtils.JoinTags(null, GlobalTags, tags); // global tags must be first so they can get overridden
+			var record = new InfluxRecord(name, jtags, fields, timestamp);
 			return record;
 		}
 	}
