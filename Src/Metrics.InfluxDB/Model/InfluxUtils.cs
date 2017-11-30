@@ -42,9 +42,9 @@ namespace Metrics.InfluxDB.Model
 				case InfluxPrecision.Nanoseconds:  return "n";
 				case InfluxPrecision.Microseconds: return "u";
 				case InfluxPrecision.Milliseconds: return "ms";
-				case InfluxPrecision.Seconds:      return "s";
-				case InfluxPrecision.Minutes:      return "m";
-				case InfluxPrecision.Hours:        return "h";
+				case InfluxPrecision.Seconds:	  return "s";
+				case InfluxPrecision.Minutes:	  return "m";
+				case InfluxPrecision.Hours:		return "h";
 				default: throw new ArgumentException(nameof(precision), $"Invalid timestamp precision: {precision}");
 			}
 		}
@@ -151,8 +151,8 @@ namespace Metrics.InfluxDB.Model
 		/// <returns>true if the type is a valid InfluxDB value type; false otherwise.</returns>
 		public static Boolean IsValidValueType(Type type) {
 			return
-				type == typeof(Char)    || type == typeof(String) ||
-				type == typeof(Byte)    || type == typeof(SByte)  ||
+				type == typeof(Char)	|| type == typeof(String) ||
+				type == typeof(Byte)	|| type == typeof(SByte)  ||
 				type == typeof(Int16)   || type == typeof(UInt16) ||
 				type == typeof(Int32)   || type == typeof(UInt32) ||
 				type == typeof(Int64)   || type == typeof(UInt64) ||

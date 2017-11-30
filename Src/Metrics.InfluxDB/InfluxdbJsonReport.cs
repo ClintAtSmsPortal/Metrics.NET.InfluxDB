@@ -55,8 +55,8 @@ namespace Metrics.InfluxDB
 			var formatter = new DefaultFormatter(false, null);
 			formatter.ContextNameFormatter = null;
 			formatter.MetricNameFormatter  = null;
-			formatter.TagKeyFormatter      = null;
-			formatter.FieldKeyFormatter    = null;
+			formatter.TagKeyFormatter	  = null;
+			formatter.FieldKeyFormatter	= null;
 			return formatter;
 		}
 	}
