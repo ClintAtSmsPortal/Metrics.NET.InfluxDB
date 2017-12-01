@@ -40,7 +40,7 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Metrics, Version=0.5.4.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Metrics.0.0.0.8\lib\net45\Metrics.dll</HintPath>
+      <HintPath>..\..\packages\Metrics.0.0.0.10\lib\net45\Metrics.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

@@ -228,10 +228,10 @@ namespace Metrics.InfluxDB.Adapters
 			static Default() {
 				ContextNameFormatter = (contextStack, contextName) => String.Join(".", contextStack.Concat(new[] { contextName }).Where(c => !String.IsNullOrWhiteSpace(c)));
 				MetricNameFormatter  = (context, name, unit, tags) => $"{context}.{name}".Trim(' ', '.');
-				TagKeyFormatter      = key => key;
-				FieldKeyFormatter    = key => key;
-				ReplaceSpaceChar     = "_";
-				LowercaseNames       = true;
+				TagKeyFormatter	  = key => key;
+				FieldKeyFormatter	= key => key;
+				ReplaceSpaceChar	 = "_";
+				LowercaseNames	   = true;
 			}
 		}
 
@@ -243,10 +243,10 @@ namespace Metrics.InfluxDB.Adapters
 			: base() {
 			ContextNameFormatter = Default.ContextNameFormatter;
 			MetricNameFormatter  = Default.MetricNameFormatter;
-			TagKeyFormatter      = Default.TagKeyFormatter;
-			FieldKeyFormatter    = Default.FieldKeyFormatter;
-			ReplaceSpaceChar     = Default.ReplaceSpaceChar;
-			LowercaseNames       = Default.LowercaseNames;
+			TagKeyFormatter	  = Default.TagKeyFormatter;
+			FieldKeyFormatter	= Default.FieldKeyFormatter;
+			ReplaceSpaceChar	 = Default.ReplaceSpaceChar;
+			LowercaseNames	   = Default.LowercaseNames;
 		}
 
 		/// <summary>

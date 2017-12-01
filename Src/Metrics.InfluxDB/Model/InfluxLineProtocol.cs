@@ -177,9 +177,9 @@ namespace Metrics.InfluxDB.Model
 				case InfluxPrecision.Nanoseconds:  longTime = sinceEpoch.Ticks * 100L; break; // 100ns per tick
 				case InfluxPrecision.Microseconds: longTime = sinceEpoch.Ticks / 10L;  break; // 10 ticks per us
 				case InfluxPrecision.Milliseconds: longTime = sinceEpoch.Ticks / TimeSpan.TicksPerMillisecond; break;
-				case InfluxPrecision.Seconds:      longTime = sinceEpoch.Ticks / TimeSpan.TicksPerSecond; break;
-				case InfluxPrecision.Minutes:      longTime = sinceEpoch.Ticks / TimeSpan.TicksPerMinute; break;
-				case InfluxPrecision.Hours:        longTime = sinceEpoch.Ticks / TimeSpan.TicksPerHour; break;
+				case InfluxPrecision.Seconds:	  longTime = sinceEpoch.Ticks / TimeSpan.TicksPerSecond; break;
+				case InfluxPrecision.Minutes:	  longTime = sinceEpoch.Ticks / TimeSpan.TicksPerMinute; break;
+				case InfluxPrecision.Hours:		longTime = sinceEpoch.Ticks / TimeSpan.TicksPerHour; break;
 				default: throw new ArgumentException(nameof(precision), $"Invalid timestamp precision: {precision}");
 			}
 
