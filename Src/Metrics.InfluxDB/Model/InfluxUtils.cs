@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Metrics.MetricData;
 
 namespace Metrics.InfluxDB.Model
 {
@@ -11,9 +12,9 @@ namespace Metrics.InfluxDB.Model
 	public static class InfluxUtils
 	{
 
-		private const String RegexUnescSpace = @"(?<!\\)[ ]";
-		private const String RegexUnescEqual = @"(?<!\\)[=]";
-		private const String RegexUnescComma = @"(?<!\\)[,]";
+		public static string RegexUnescSpace = @"(?<!\\)[ ]";
+		public static string RegexUnescEqual = @"(?<!\\)[=]";
+		public static string RegexUnescComma = @"(?<!\\)[,]";
 
 
 		#region Format Values
@@ -128,6 +129,32 @@ namespace Metrics.InfluxDB.Model
 			String[] split = Regex.Split(name, RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
 			if (split.Length == 1 && !Regex.IsMatch(split[0], RegexUnescEqual)) split[0] = $"Name={split[0]}";
 			var retTags = ToInfluxTags(tags).Concat(ToInfluxTags(split));
+			return retTags.GroupBy(t => t.Key).Select(g => g.Last()); // this is similar to: retTags.DistinctBy(t => t.Key), but takes the last value instead so global tags get overriden by later tags
+		}
+
+		public static IEnumerable<InfluxTag> JoinTags(List<CounterValue.SetItem> items, params MetricTags[] tags)
+		{
+			var tmpInfluxTags = new List<InfluxTag>();
+			foreach (var i in items)
+			{
+				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var split = Regex.Split(itemName, RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
+				tmpInfluxTags.AddRange(ToInfluxTags(split));
+			}
+			var retTags = ToInfluxTags(tags).Concat(tmpInfluxTags);
+			return retTags.GroupBy(t => t.Key).Select(g => g.Last()); // this is similar to: retTags.DistinctBy(t => t.Key), but takes the last value instead so global tags get overriden by later tags
+		}
+
+		public static IEnumerable<InfluxTag> JoinTags(List<MeterValue.SetItem> items, params MetricTags[] tags)
+		{
+			var tmpInfluxTags = new List<InfluxTag>();
+			foreach (var i in items)
+			{
+				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var split = Regex.Split(itemName, RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
+				tmpInfluxTags.AddRange(ToInfluxTags(split));
+			}
+			var retTags = ToInfluxTags(tags).Concat(tmpInfluxTags);
 			return retTags.GroupBy(t => t.Key).Select(g => g.Last()); // this is similar to: retTags.DistinctBy(t => t.Key), but takes the last value instead so global tags get overriden by later tags
 		}
 
