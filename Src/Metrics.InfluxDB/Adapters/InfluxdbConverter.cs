@@ -67,13 +67,23 @@ namespace Metrics.InfluxDB.Adapters
 		{
 			var fields = new List<InfluxField>();
 			fields.Add(new InfluxField("Count", value.Count));
-			
+
 			foreach (var i in value.Items)
 			{
-				fields.Add(new InfluxField(i.Item + "_Count", i.Count));
-				fields.Add(new InfluxField(i.Item + "_Percent", i.Percent));
+				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var split = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
+				if (split.Any() && !split[0].Contains("="))
+				{
+					itemName = split[0];
+				}
+				fields.Add(new InfluxField(itemName + "_Count", i.Count));
+				fields.Add(new InfluxField(itemName + "_Percent", i.Percent));
 			}
-			yield return GetRecord(name, tags, fields);
+
+			IEnumerable<InfluxTag> jtags = new List<InfluxTag>();
+			jtags = InfluxUtils.JoinTags(value.Items.ToList(), GlobalTags, tags);
+			var itemTags = jtags.Select(f => f.Key + "=" + f.Value);
+			yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
 		/// <summary>
@@ -96,14 +106,24 @@ namespace Metrics.InfluxDB.Adapters
 
 			foreach (var i in value.Items)
 			{
-				fields.Add(new InfluxField(i.Item + "_Count", i.Value.Count));
-				fields.Add(new InfluxField(i.Item + "_Percent", i.Percent));
-				fields.Add(new InfluxField(i.Item + "_Mean Rate", i.Value.MeanRate));
-				fields.Add(new InfluxField(i.Item + "_1 Min Rate", i.Value.OneMinuteRate));
-				fields.Add(new InfluxField(i.Item + "_5 Min Rate", i.Value.FiveMinuteRate));
-				fields.Add(new InfluxField(i.Item + "_15 Min Rate", i.Value.FifteenMinuteRate));
+				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var split = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
+				if (split.Any() && !split[0].Contains("="))
+				{
+					itemName = split[0];
+				}
+				fields.Add(new InfluxField(itemName + "_Count", i.Value.Count));
+				fields.Add(new InfluxField(itemName + "_Percent", i.Percent));
+				fields.Add(new InfluxField(itemName + "_Mean Rate", i.Value.MeanRate));
+				fields.Add(new InfluxField(itemName + "_1 Min Rate", i.Value.OneMinuteRate));
+				fields.Add(new InfluxField(itemName + "_5 Min Rate", i.Value.FiveMinuteRate));
+				fields.Add(new InfluxField(itemName + "_15 Min Rate", i.Value.FifteenMinuteRate));
 			}
-			yield return GetRecord(name, tags, fields);
+
+			IEnumerable<InfluxTag> jtags = new List<InfluxTag>();
+			jtags = InfluxUtils.JoinTags(value.Items.ToList(), GlobalTags, tags);
+			var itemTags = jtags.Select(f => f.Key + "=" + f.Value);
+			yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
 		/// <summary>
@@ -179,14 +199,24 @@ namespace Metrics.InfluxDB.Adapters
 			// to the histogram and not to the meter. I'm not sure if this is a bug or by design.
 			foreach (var i in value.Rate.Items)
 			{
-				fields.Add(new InfluxField(i.Item + "_Count", i.Value.Count));
-				fields.Add(new InfluxField(i.Item + "_Percent", i.Percent));
-				fields.Add(new InfluxField(i.Item + "_Mean Rate", i.Value.MeanRate));
-				fields.Add(new InfluxField(i.Item + "_1 Min Rate", i.Value.OneMinuteRate));
-				fields.Add(new InfluxField(i.Item + "_5 Min Rate", i.Value.FiveMinuteRate));
-				fields.Add(new InfluxField(i.Item + "_15 Min Rate", i.Value.FifteenMinuteRate));
+				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var split = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
+				if (split.Any() && !split[0].Contains("="))
+				{
+					itemName = split[0];
+				}
+				fields.Add(new InfluxField(itemName + "_Count", i.Value.Count));
+				fields.Add(new InfluxField(itemName + "_Percent", i.Percent));
+				fields.Add(new InfluxField(itemName + "_Mean Rate", i.Value.MeanRate));
+				fields.Add(new InfluxField(itemName + "_1 Min Rate", i.Value.OneMinuteRate));
+				fields.Add(new InfluxField(itemName + "_5 Min Rate", i.Value.FiveMinuteRate));
+				fields.Add(new InfluxField(itemName + "_15 Min Rate", i.Value.FifteenMinuteRate));
 			}
-			yield return GetRecord(name, tags, fields);
+
+			IEnumerable<InfluxTag> jtags = new List<InfluxTag>();
+			jtags = InfluxUtils.JoinTags(value.Rate.Items.ToList(), GlobalTags, tags);
+			var itemTags = jtags.Select(f => f.Key + "=" + f.Value);
+			yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
 		/// <summary>
@@ -266,7 +296,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <returns>A new <see cref="InfluxRecord"/> from the specified name, tags, and fields.</returns>
 		public InfluxRecord GetRecord(String name, MetricTags tags, IEnumerable<InfluxField> fields, DateTime timestamp)
 		{
-			var jtags = InfluxUtils.JoinTags(null, GlobalTags, tags); // global tags must be first so they can get overridden
+			var jtags = InfluxUtils.JoinTags((string)null, GlobalTags, tags); // global tags must be first so they can get overridden
 			var record = new InfluxRecord(name, jtags, fields, timestamp);
 			return record;
 		}

@@ -195,11 +195,9 @@ namespace Metrics.InfluxDB.Tests
 			counter.Increment("item1,item2=ival2,item3=ival3", 100);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
-			writer.LastBatch.Should().HaveCount(2);
-
-			expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter,key1=value1,key4=value4 count=400i {expTime}");
-			writer.LastBatch[1].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=100i,percent=25 {expTime}");
+			writer.LastBatch.Should().HaveCount(1);
+			
+			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=400i,item1_count=100i,item1_percent=25 {expTime}");
 		}
 
 		[Fact]
@@ -225,11 +223,13 @@ namespace Metrics.InfluxDB.Tests
 			meter.Mark("item1,item2=ival2,item3=ival3", 100);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
-			writer.LastBatch.Should().HaveCount(2);
+			writer.LastBatch.Should().HaveCount(1);
 
+			var lastBatch = writer.LastBatch[0].ToLineProtocol(precision);
+			lastBatch.Should().StartWith("testcontext.test_meter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=400i,mean_rate=");
+			lastBatch.Should().Contain(",1_min_rate=0,5_min_rate=0,15_min_rate=0,item1_count=100i,item1_percent=25,item1_mean_rate=");
 			expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,key1=value1,key4=value4 count=400i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
-			writer.LastBatch[1].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=100i,percent=25,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
+			lastBatch.Should().EndWith($@",item1_1_min_rate=0,item1_5_min_rate=0,item1_15_min_rate=0 {expTime}");
 		}
 
 		[Fact]
@@ -286,8 +286,10 @@ namespace Metrics.InfluxDB.Tests
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 
+			var lastBatch = writer.LastBatch[0].ToLineProtocol(precision);
+			lastBatch.Should().StartWith("testcontext.test_timer,key1=value1,key4=value4 active_sessions=0i,total_time=150i,count=2i,mean_rate=");
 			expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_timer,key1=value1,key4=value4 active_sessions=0i,total_time=150i,count=2i,").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0,last=50,min=50,mean=75,max=100,stddev=25,median=100,sample_size=2i,percentile_75%=100,percentile_95%=100,percentile_98%=100,percentile_99%=100,percentile_99.9%=100 {expTime}");
+			lastBatch.Should().EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0,last=50,min=50,mean=75,max=100,stddev=25,median=100,sample_size=2i,percentile_75%=100,percentile_95%=100,percentile_98%=100,percentile_99%=100,percentile_99.9%=100 {expTime}");
 		}
 
 		[Fact]
