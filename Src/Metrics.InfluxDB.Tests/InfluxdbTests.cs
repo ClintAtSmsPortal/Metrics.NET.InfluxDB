@@ -17,55 +17,17 @@ namespace Metrics.InfluxDB.Tests
 			// invalid input strings
 			InfluxTag empty = InfluxTag.Empty;
 			String nullReason = "Because the input string should contain a single key and value separated by an equals sign.";
-			InfluxUtils.ToInfluxTag("key").Should().Be(empty, nullReason);
-			InfluxUtils.ToInfluxTag("key=").Should().Be(empty, nullReason);
-			InfluxUtils.ToInfluxTag("=value").Should().Be(empty, nullReason);
-			InfluxUtils.ToInfluxTag("key=value1=value2").Should().Be(empty, nullReason);
-			InfluxUtils.ToInfluxTag("key,value").Should().Be(empty, nullReason);
-			InfluxUtils.ToInfluxTag("key==").Should().Be(empty, nullReason);
-			InfluxUtils.ToInfluxTag("==val").Should().Be(empty, nullReason);
+			
+		    
+		    InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>("key", "")).Should().Be(empty, nullReason);
+            InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>(null, "value")).Should().Be(empty, nullReason);
+		    InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>(null, "")).Should().Be(empty, nullReason);
+		    InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>(null, null)).Should().Be(empty, nullReason);
+		    InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>("", "value")).Should().Be(empty, nullReason);
+            InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>("", null)).Should().Be(empty, nullReason);
+		    InfluxUtils.ToInfluxTag(new KeyValuePair<string, string>("", "")).Should().Be(empty, nullReason);
 		}
 
-		[Fact]
-		public void InfluxTag_CanParse_SingleFromString() {
-			// valid input strings
-			InfluxUtils.ToInfluxTag("key=value").Should().Be(new InfluxTag("key", "value"));
-			InfluxUtils.ToInfluxTag("key with spaces=value with spaces").Should().Be(new InfluxTag("key with spaces", "value with spaces"));
-			InfluxUtils.ToInfluxTag("key,with,commas=value,with,commas").Should().Be(new InfluxTag("key,with,commas", "value,with,commas"));
-			InfluxUtils.ToInfluxTag("key\"with\"quot=value\"with\"quot").Should().Be(new InfluxTag("key\"with\"quot", "value\"with\"quot"));
-		}
-
-		[Fact]
-		public void InfluxTag_CanParse_MultiFromCommaSeparatedString() {
-			// comma-separated single string
-			InfluxUtils.ToInfluxTags("key").Should().BeEmpty();
-			InfluxUtils.ToInfluxTags("key1=value1,key2=value2").Should().BeEquivalentTo(new InfluxTag("key1", "value1"), new InfluxTag("key2", "value2"));
-			InfluxUtils.ToInfluxTags("key1,key2=value2,key3,key4").Should().BeEquivalentTo(new InfluxTag("key2", "value2"));
-		}
-
-		[Fact]
-		public void InfluxTag_CanParse_MultiFromStringArray() {
-			// string[] array
-			InfluxUtils.ToInfluxTags("key1", "key2").Should().BeEmpty();
-			InfluxUtils.ToInfluxTags("key1=value1", "key2=value2").Should().BeEquivalentTo(new InfluxTag("key1", "value1"), new InfluxTag("key2", "value2"));
-			InfluxUtils.ToInfluxTags("key1", "key2=value2", "key3", "key4").Should().BeEquivalentTo(new InfluxTag("key2", "value2"));
-		}
-
-		[Fact]
-		public void InfluxTag_CanParse_FromSingleMetricTags() {
-			InfluxUtils.ToInfluxTags(new MetricTags("key1", "key2")).Should().BeEmpty();
-			InfluxUtils.ToInfluxTags(new MetricTags("key1=value1", "key2")).Should().BeEquivalentTo(new InfluxTag("key1", "value1"));
-			InfluxUtils.ToInfluxTags(new MetricTags("key1", "key2=value2")).Should().BeEquivalentTo(new InfluxTag("key2", "value2"));
-			InfluxUtils.ToInfluxTags(new MetricTags("key1=value1", "key2=value2")).Should().BeEquivalentTo(new InfluxTag("key1", "value1"), new InfluxTag("key2", "value2"));
-		}
-
-		[Fact]
-		public void InfluxTag_CanParse_FromMultiMetricTags() {
-			InfluxUtils.ToInfluxTags(new MetricTags("key1", "key2"), new MetricTags("key3", "key4")).Should().BeEmpty();
-			InfluxUtils.ToInfluxTags(new MetricTags("key1=value1", "key2"), new MetricTags("key3=value3", "key4")).Should().BeEquivalentTo(new InfluxTag("key1", "value1"), new InfluxTag("key3", "value3"));
-			InfluxUtils.ToInfluxTags(new MetricTags("key1", "key2=value2"), new MetricTags("key3", "key4=value4")).Should().BeEquivalentTo(new InfluxTag("key2", "value2"), new InfluxTag("key4", "value4"));
-			InfluxUtils.ToInfluxTags(new MetricTags("key1=value1", "key2=value2"), new MetricTags("key3=value3", "key4=value4")).Should().BeEquivalentTo(new InfluxTag("key1", "value1"), new InfluxTag("key2", "value2"), new InfluxTag("key3", "value3"), new InfluxTag("key4", "value4"));
-		}
 
 
 		[Fact]
@@ -163,7 +125,13 @@ namespace Metrics.InfluxDB.Tests
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().BeEmpty("Because running a report with no metrics should not result in any records.");
 
-			context.Gauge("test_gauge", () => 123.456, Unit.Bytes, new MetricTags("key1=value1,tag2,tag3,key4=value4"));
+			context.Gauge("test_gauge", () => 123.456, Unit.Bytes, new[]
+			{
+			    new KeyValuePair<string,string>("key1","value1"),
+			    new KeyValuePair<string,string>("tag2",""),
+			    new KeyValuePair<string,string>("tag3",""),
+			    new KeyValuePair<string,string>("key4","value4"),
+			});
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
@@ -180,10 +148,16 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var counter = context.Counter("test_counter", Unit.Bytes, new MetricTags("key1=value1,tag2,tag3,key4=value4"));
+			var counter = context.Counter("test_counter", Unit.Bytes, new[]
+			{
+			    new KeyValuePair<string,string>("key1","value1"),
+			    new KeyValuePair<string,string>("tag2",""),
+			    new KeyValuePair<string,string>("tag3",""),
+			    new KeyValuePair<string,string>("key4","value4"),
+			});
 
-			// add normally
-			counter.Increment(300);
+            // add normally
+            counter.Increment(300);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
@@ -208,16 +182,22 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, new MetricTags("key1=value1,tag2,tag3,key4=value4"));
+			var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, new[]
+			{
+			    new KeyValuePair<string,string>("key1","value1"),
+			    new KeyValuePair<string,string>("tag2",""),
+			    new KeyValuePair<string,string>("tag3",""),
+			    new KeyValuePair<string,string>("key4","value4"),
+			});
 
-			// add normally
-			meter.Mark(300);
+            // add normally
+            meter.Mark(300);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 
 			var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,key1=value1,key4=value4 count=300i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}"); ;
+			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,key1=value1,key4=value4 count=300i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
 
 			// add with set item
 			meter.Mark("item1,item2=ival2,item3=ival3", 100);
@@ -232,7 +212,44 @@ namespace Metrics.InfluxDB.Tests
 			lastBatch.Should().EndWith($@",item1_1_min_rate=0,item1_5_min_rate=0,item1_15_min_rate=0 {expTime}");
 		}
 
-		[Fact]
+        [Fact]
+        public void InfluxReport_CanAddRecords_WithMultiple_SetItems_ForMeter()
+        {
+            var config = new InfluxConfig(mockUri, "testdb");
+            var writer = new InfluxdbTestWriter(config); config.Writer = writer;
+            var report = new InfluxdbHttpReport(config);
+            var context = new DefaultMetricsContext("TestContext");
+            var precision = config.Precision ?? InfluxConfig.Default.Precision;
+            var metricsData = context.DataProvider.CurrentMetricsData;
+            var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, new[]
+            {
+                new KeyValuePair<string,string>("key1","value1")
+            });
+
+            // add normally
+            meter.Mark(300);
+            metricsData = context.DataProvider.CurrentMetricsData;
+            report.RunReport(metricsData, hsFunc, CancellationToken.None);
+            writer.LastBatch.Should().HaveCount(1);
+
+            var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
+            writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,key1=value1,key4=value4 count=300i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
+
+            // add with set item
+            meter.Mark("item1,item2=ival2,item3=ival3", 100);
+            meter.Mark("item1,item2=ival2,item3=ival3", 100);
+            metricsData = context.DataProvider.CurrentMetricsData;
+            report.RunReport(metricsData, hsFunc, CancellationToken.None);
+            writer.LastBatch.Should().HaveCount(1);
+
+            var lastBatch = writer.LastBatch[0].ToLineProtocol(precision);
+            lastBatch.Should().StartWith("testcontext.test_meter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=500i,mean_rate=");
+            lastBatch.Should().Contain(",1_min_rate=0,5_min_rate=0,15_min_rate=0,item1_count=200i,item1_percent=25,item1_mean_rate=");
+            expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
+            lastBatch.Should().EndWith($@",item1_1_min_rate=0,item1_5_min_rate=0,item1_15_min_rate=0 {expTime}");
+        }
+
+        [Fact]
 		public void InfluxReport_CanAddRecords_ForHistogram() {
 			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
@@ -240,10 +257,16 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var hist = context.Histogram("test_hist", Unit.Bytes, SamplingType.Default, new MetricTags("key1=value1,tag2,tag3,key4=value4"));
+			var hist = context.Histogram("test_hist", Unit.Bytes, SamplingType.Default, new[]
+			{
+			    new KeyValuePair<string,string>("key1","value1"),
+			    new KeyValuePair<string,string>("tag2",""),
+			    new KeyValuePair<string,string>("tag3",""),
+			    new KeyValuePair<string,string>("key4","value4"),
+			});
 
-			// add normally
-			hist.Update(300);
+            // add normally
+            hist.Update(300);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
@@ -269,10 +292,16 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var timer = context.Timer("test_timer", Unit.Bytes, SamplingType.Default, TimeUnit.Seconds, TimeUnit.Seconds, new MetricTags("key1=value1,tag2,tag3,key4=value4"));
+			var timer = context.Timer("test_timer", Unit.Bytes, SamplingType.Default, TimeUnit.Seconds, TimeUnit.Seconds, new[]
+			{
+			    new KeyValuePair<string,string>("key1","value1"),
+			    new KeyValuePair<string,string>("tag2",""),
+			    new KeyValuePair<string,string>("tag3",""),
+			    new KeyValuePair<string,string>("key4","value4"),
+			});
 
-			// add normally
-			timer.Record(100, TimeUnit.Seconds);
+            // add normally
+            timer.Record(100, TimeUnit.Seconds);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
@@ -317,8 +346,8 @@ namespace Metrics.InfluxDB.Tests
 			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"health_checks,name=health_check_1 ishealthy=True,message=""Healthy check!"" {expTime}");
 			writer.LastBatch[1].ToLineProtocol(precision).Should().Be($@"health_checks,name=health_check_2 ishealthy=False,message=""Unhealthy check!"" {expTime}");
 			writer.LastBatch[2].ToLineProtocol(precision).Should().Be($@"health_checks,name=health_check_3,tag3=key3 ishealthy=True,message=""Healthy check!"" {expTime}");
-			writer.LastBatch[3].ToLineProtocol(precision).Should().Be($@"health_checks,name=health_check_4,tag_4=key\ 4 ishealthy=True,message=""Healthy check!"" {expTime}");
-			writer.LastBatch[4].ToLineProtocol(precision).Should().Be($@"health_checks,name=health\ check\ 5,tag5=key5 ishealthy=True,message=""Healthy check!"" {expTime}");
+			writer.LastBatch[3].ToLineProtocol(precision).Should().Be($@"health_checks,name=health_check_4,tag_4=key_4,tag3=key3 ishealthy=True,message=""Healthy check!"" {expTime}");
+			writer.LastBatch[4].ToLineProtocol(precision).Should().Be($@"health_checks,name=health_check_5,tag_4=key_4,tag3=key3,tag5=key5 ishealthy=True,message=""Healthy check!"" {expTime}");
 		}
 
 

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using Metrics.InfluxDB.Model;
 
 namespace Metrics.InfluxDB.Adapters
@@ -33,7 +35,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="unit">The metric units.</param>
 		/// <param name="tags">The metric tags.</param>
 		/// <returns>The formatted metric name.</returns>
-		public delegate String MetricFormatterDelegate(String context, String name, Unit unit, String[] tags);
+		public delegate String MetricFormatterDelegate(String context, String name, Unit unit, KeyValuePair<string,string>[] tags);
 
 		/// <summary>
 		/// The delegate used for formatting tag key names.
@@ -130,8 +132,8 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="unit">The metric units.</param>
 		/// <param name="tags">The metric tags.</param>
 		/// <returns>The metric name after applying the formatters and transformations, or null if the <see cref="MetricNameFormatter"/> is not set.</returns>
-		public virtual String FormatMetricName(String context, String name, Unit unit, String[] tags) {
-			String value = MetricNameFormatter?.Invoke(context, name, unit, tags);
+		public virtual string FormatMetricName(string context, string name, Unit unit, KeyValuePair<string,string>[] tags) {
+			var value = MetricNameFormatter?.Invoke(context, name, unit, tags);
 			if (value == null) return null; // return null so that caller knows that it can call its own default implementation if it has one
 			return InfluxUtils.LowerAndReplaceSpaces(value, LowercaseNames, ReplaceSpaceChar);
 		}
@@ -165,7 +167,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="record">The <see cref="InfluxRecord"/> to format the tag and field keys for.</param>
 		/// <returns>The same <see cref="InfluxRecord"/> instance with the tag and field keys formatted.</returns>
 		public virtual InfluxRecord FormatRecord(InfluxRecord record) {
-			record.Name = FormatMetricName(null, record.Name, Unit.None, null) ?? record.Name;
+			record.Name = FormatMetricName(null, record.Name, Unit.None,null) ?? record.Name;
 
 			for (int i = 0; i < record.Tags.Count; i++) {
 				InfluxTag tag = record.Tags[i];
@@ -227,7 +229,8 @@ namespace Metrics.InfluxDB.Adapters
 
 			static Default() {
 				ContextNameFormatter = (contextStack, contextName) => String.Join(".", contextStack.Concat(new[] { contextName }).Where(c => !String.IsNullOrWhiteSpace(c)));
-				MetricNameFormatter  = (context, name, unit, tags) => $"{context}.{name}".Trim(' ', '.');
+
+                MetricNameFormatter  = (context, name, unit, tags) => $"{context}.{name}".Trim(' ', '.');
 				TagKeyFormatter	  = key => key;
 				FieldKeyFormatter	= key => key;
 				ReplaceSpaceChar	 = "_";
