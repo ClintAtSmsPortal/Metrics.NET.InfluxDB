@@ -213,43 +213,6 @@ namespace Metrics.InfluxDB.Tests
 		}
 
         [Fact]
-        public void InfluxReport_CanAddRecords_WithMultiple_SetItems_ForMeter()
-        {
-            var config = new InfluxConfig(mockUri, "testdb");
-            var writer = new InfluxdbTestWriter(config); config.Writer = writer;
-            var report = new InfluxdbHttpReport(config);
-            var context = new DefaultMetricsContext("TestContext");
-            var precision = config.Precision ?? InfluxConfig.Default.Precision;
-            var metricsData = context.DataProvider.CurrentMetricsData;
-            var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, new[]
-            {
-                new KeyValuePair<string,string>("key1","value1")
-            });
-
-            // add normally
-            meter.Mark(300);
-            metricsData = context.DataProvider.CurrentMetricsData;
-            report.RunReport(metricsData, hsFunc, CancellationToken.None);
-            writer.LastBatch.Should().HaveCount(1);
-
-            var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-            writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,key1=value1,key4=value4 count=300i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
-
-            // add with set item
-            meter.Mark("item1,item2=ival2,item3=ival3", 100);
-            meter.Mark("item1,item2=ival2,item3=ival3", 100);
-            metricsData = context.DataProvider.CurrentMetricsData;
-            report.RunReport(metricsData, hsFunc, CancellationToken.None);
-            writer.LastBatch.Should().HaveCount(1);
-
-            var lastBatch = writer.LastBatch[0].ToLineProtocol(precision);
-            lastBatch.Should().StartWith("testcontext.test_meter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=500i,mean_rate=");
-            lastBatch.Should().Contain(",1_min_rate=0,5_min_rate=0,15_min_rate=0,item1_count=200i,item1_percent=25,item1_mean_rate=");
-            expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-            lastBatch.Should().EndWith($@",item1_1_min_rate=0,item1_5_min_rate=0,item1_15_min_rate=0 {expTime}");
-        }
-
-        [Fact]
 		public void InfluxReport_CanAddRecords_ForHistogram() {
 			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
