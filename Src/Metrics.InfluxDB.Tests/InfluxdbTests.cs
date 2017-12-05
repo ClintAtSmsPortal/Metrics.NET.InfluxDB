@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using Metrics.InfluxDB.Model;
 using FluentAssertions;
+using Metrics.Core;
 using Xunit;
 
 namespace Metrics.InfluxDB.Tests
@@ -125,19 +126,21 @@ namespace Metrics.InfluxDB.Tests
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().BeEmpty("Because running a report with no metrics should not result in any records.");
 
-			context.Gauge("test_gauge", () => 123.456, Unit.Bytes, new[]
+			var tags = new[]
 			{
-			    new KeyValuePair<string,string>("key1","value1"),
-			    new KeyValuePair<string,string>("tag2",""),
-			    new KeyValuePair<string,string>("tag3",""),
-			    new KeyValuePair<string,string>("key4","value4"),
-			});
+				new KeyValuePair<string, string>("key1", "value1"),
+				new KeyValuePair<string, string>("tag2", ""),
+				new KeyValuePair<string, string>("tag3", ""),
+				new KeyValuePair<string, string>("key4", "value4"),
+			};
+			context.Gauge("test_gauge", () => 123.456, Unit.Bytes, tags);
+			var metricIdentifier = MetricIdentifier.Calculate("testcontext.test_gauge.gauge", tags);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 
 			var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_gauge,key1=value1,key4=value4 value=123.456 {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().Be(metricIdentifier + $@",key1=value1,key4=value4 value=123.456 {expTime}");
 		}
 
 		[Fact]
@@ -148,22 +151,23 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var counter = context.Counter("test_counter", Unit.Bytes, new[]
+			var tags = new[]
 			{
-			    new KeyValuePair<string,string>("key1","value1"),
-			    new KeyValuePair<string,string>("tag2",""),
-			    new KeyValuePair<string,string>("tag3",""),
-			    new KeyValuePair<string,string>("key4","value4"),
-			});
+				new KeyValuePair<string, string>("key1", "value1"),
+				new KeyValuePair<string, string>("tag2", ""),
+				new KeyValuePair<string, string>("tag3", ""),
+				new KeyValuePair<string, string>("key4", "value4"),
+			};
+			var counter = context.Counter("test_counter", Unit.Bytes, tags);
+			var metricIdentifier = MetricIdentifier.Calculate("testcontext.test_counter.counter", tags);
 
-            // add normally
-            counter.Increment(300);
+			// add normally
+			counter.Increment(300);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
-
 			var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter,key1=value1,key4=value4 count=300i {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().Be(metricIdentifier + $@",key1=value1,key4=value4 count=300i {expTime}");
 
 			// add with set item
 			counter.Increment("item1,item2=ival2,item3=ival3", 100);
@@ -171,7 +175,7 @@ namespace Metrics.InfluxDB.Tests
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 			
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=400i,item1_count=100i,item1_percent=25 {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().Be(metricIdentifier + $@",item2=ival2,item3=ival3,key1=value1,key4=value4 count=400i,item1_count=100i,item1_percent=25 {expTime}");
 		}
 
 		[Fact]
@@ -182,22 +186,24 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, new[]
+			var tags = new[]
 			{
-			    new KeyValuePair<string,string>("key1","value1"),
-			    new KeyValuePair<string,string>("tag2",""),
-			    new KeyValuePair<string,string>("tag3",""),
-			    new KeyValuePair<string,string>("key4","value4"),
-			});
+				new KeyValuePair<string, string>("key1", "value1"),
+				new KeyValuePair<string, string>("tag2", ""),
+				new KeyValuePair<string, string>("tag3", ""),
+				new KeyValuePair<string, string>("key4", "value4"),
+			};
+			var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, tags);
+			var metricIdentifier = MetricIdentifier.Calculate("testcontext.test_meter.meter", tags);
 
-            // add normally
-            meter.Mark(300);
+			// add normally
+			meter.Mark(300);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 
 			var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_meter,key1=value1,key4=value4 count=300i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith(metricIdentifier + $@",key1=value1,key4=value4 count=300i,mean_rate=").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0 {expTime}");
 
 			// add with set item
 			meter.Mark("item1,item2=ival2,item3=ival3", 100);
@@ -206,7 +212,7 @@ namespace Metrics.InfluxDB.Tests
 			writer.LastBatch.Should().HaveCount(1);
 
 			var lastBatch = writer.LastBatch[0].ToLineProtocol(precision);
-			lastBatch.Should().StartWith("testcontext.test_meter,item2=ival2,item3=ival3,key1=value1,key4=value4 count=400i,mean_rate=");
+			lastBatch.Should().StartWith(metricIdentifier + $@",item2=ival2,item3=ival3,key1=value1,key4=value4 count=400i,mean_rate=");
 			lastBatch.Should().Contain(",1_min_rate=0,5_min_rate=0,15_min_rate=0,item1_count=100i,item1_percent=25,item1_mean_rate=");
 			expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
 			lastBatch.Should().EndWith($@",item1_1_min_rate=0,item1_5_min_rate=0,item1_15_min_rate=0 {expTime}");
@@ -220,22 +226,24 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var hist = context.Histogram("test_hist", Unit.Bytes, SamplingType.Default, new[]
+			var tags = new[]
 			{
-			    new KeyValuePair<string,string>("key1","value1"),
-			    new KeyValuePair<string,string>("tag2",""),
-			    new KeyValuePair<string,string>("tag3",""),
-			    new KeyValuePair<string,string>("key4","value4"),
-			});
+				new KeyValuePair<string, string>("key1", "value1"),
+				new KeyValuePair<string, string>("tag2", ""),
+				new KeyValuePair<string, string>("tag3", ""),
+				new KeyValuePair<string, string>("key4", "value4"),
+			};
+			var hist = context.Histogram("test_hist", Unit.Bytes, SamplingType.Default, tags);
+			var metricIdentifier = MetricIdentifier.Calculate("testcontext.test_hist.histogram", tags);
 
-            // add normally
-            hist.Update(300);
+			// add normally
+			hist.Update(300);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 
 			var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_hist,key1=value1,key4=value4 count=1i,last=300,min=300,mean=300,max=300,stddev=0,median=300,sample_size=1i,percentile_75%=300,percentile_95%=300,percentile_98%=300,percentile_99%=300,percentile_99.9%=300 {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().Be(metricIdentifier + $@",key1=value1,key4=value4 count=1i,last=300,min=300,mean=300,max=300,stddev=0,median=300,sample_size=1i,percentile_75%=300,percentile_95%=300,percentile_98%=300,percentile_99%=300,percentile_99.9%=300 {expTime}");
 
 			// add with set item
 			hist.Update(100, "item1,item2=ival2,item3=ival3");
@@ -244,7 +252,7 @@ namespace Metrics.InfluxDB.Tests
 			writer.LastBatch.Should().HaveCount(1);
 
 			expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_hist,key1=value1,key4=value4 count=2i,last=100,min=100,mean=200,max=300,stddev=100,median=300,sample_size=2i,percentile_75%=300,percentile_95%=300,percentile_98%=300,percentile_99%=300,percentile_99.9%=300 {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().Be(metricIdentifier + $@",key1=value1,key4=value4 count=2i,last=100,min=100,mean=200,max=300,stddev=100,median=300,sample_size=2i,percentile_75%=300,percentile_95%=300,percentile_98%=300,percentile_99%=300,percentile_99.9%=300 {expTime}");
 		}
 
 		[Fact]
@@ -255,22 +263,24 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var timer = context.Timer("test_timer", Unit.Bytes, SamplingType.Default, TimeUnit.Seconds, TimeUnit.Seconds, new[]
+			var tags = new[]
 			{
-			    new KeyValuePair<string,string>("key1","value1"),
-			    new KeyValuePair<string,string>("tag2",""),
-			    new KeyValuePair<string,string>("tag3",""),
-			    new KeyValuePair<string,string>("key4","value4"),
-			});
+				new KeyValuePair<string, string>("key1", "value1"),
+				new KeyValuePair<string, string>("tag2", ""),
+				new KeyValuePair<string, string>("tag3", ""),
+				new KeyValuePair<string, string>("key4", "value4"),
+			};
+			var timer = context.Timer("test_timer", Unit.Bytes, SamplingType.Default, TimeUnit.Seconds, TimeUnit.Seconds, tags);
+			var metricIdentifier = MetricIdentifier.Calculate("testcontext.test_timer.timer", tags);
 
-            // add normally
-            timer.Record(100, TimeUnit.Seconds);
+			// add normally
+			timer.Record(100, TimeUnit.Seconds);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
 
 			var expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
-			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith($@"testcontext.test_timer,key1=value1,key4=value4 active_sessions=0i,total_time=100i,count=1i,").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0,last=100,min=100,mean=100,max=100,stddev=0,median=100,sample_size=1i,percentile_75%=100,percentile_95%=100,percentile_98%=100,percentile_99%=100,percentile_99.9%=100 {expTime}");
+			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith(metricIdentifier + $@",key1=value1,key4=value4 active_sessions=0i,total_time=100i,count=1i,").And.EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0,last=100,min=100,mean=100,max=100,stddev=0,median=100,sample_size=1i,percentile_75%=100,percentile_95%=100,percentile_98%=100,percentile_99%=100,percentile_99.9%=100 {expTime}");
 
 			// add with set item
 			timer.Record(50, TimeUnit.Seconds, "item1,item2=ival2,item3=ival3");
@@ -279,7 +289,7 @@ namespace Metrics.InfluxDB.Tests
 			writer.LastBatch.Should().HaveCount(1);
 
 			var lastBatch = writer.LastBatch[0].ToLineProtocol(precision);
-			lastBatch.Should().StartWith("testcontext.test_timer,key1=value1,key4=value4 active_sessions=0i,total_time=150i,count=2i,mean_rate=");
+			lastBatch.Should().StartWith(metricIdentifier + $@",key1=value1,key4=value4 active_sessions=0i,total_time=150i,count=2i,mean_rate=");
 			expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
 			lastBatch.Should().EndWith($@",1_min_rate=0,5_min_rate=0,15_min_rate=0,last=50,min=50,mean=75,max=100,stddev=25,median=100,sample_size=2i,percentile_75%=100,percentile_95%=100,percentile_98%=100,percentile_99%=100,percentile_99.9%=100 {expTime}");
 		}

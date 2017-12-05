@@ -268,6 +268,7 @@ namespace Metrics.InfluxDB.Adapters
             foreach (var result in status.Results)
             {
                 var itemName = string.IsNullOrWhiteSpace(result.Name) ? string.Empty : result.Name;
+				
                 var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
                 if (splits.Any())
                 {
@@ -281,9 +282,9 @@ namespace Metrics.InfluxDB.Adapters
                         }
                     }
                 }
-                var jtags = InfluxUtils.JoinTags(GlobalTags, setItemTags.ToArray());
+                var jtags = InfluxUtils.JoinTags(GlobalTags, result.Tags, setItemTags.ToArray());
                 var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-                yield return GetRecord("Health Checks",itemTags.ToArray(), new[] {
+                yield return GetRecord("Health Checks", itemTags.ToArray(), new[] {
                     new InfluxField("IsHealthy", result.Check.IsHealthy),
                     new InfluxField("Message",   result.Check.Message)
                 });
