@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Metrics.Core;
 using Metrics.MetricData;
 using Metrics.InfluxDB.Model;
 
@@ -11,12 +12,11 @@ namespace Metrics.InfluxDB.Adapters
     /// This class converts Metrics.NET metric values into <see cref="InfluxRecord"/> objects.
     /// </summary>
     public abstract class InfluxdbConverter
-    {
-
-        /// <summary>
-        /// Gets or sets the current timestamp. This value is used when creating new <see cref="InfluxRecord"/> instances.
-        /// </summary>
-        public DateTime? Timestamp { get; set; }
+	{
+		/// <summary>
+		/// Gets or sets the current timestamp. This value is used when creating new <see cref="InfluxRecord"/> instances.
+		/// </summary>
+		public DateTime? Timestamp { get; set; }
 
         /// <summary>
         /// Gets or sets the global tags. Global tags are added to all created <see cref="InfluxRecord"/> instances.
@@ -40,8 +40,6 @@ namespace Metrics.InfluxDB.Adapters
         {
             GlobalTags = globalTags ?? MetricTags.None;
         }
-
-
 
         /// <summary>
         /// Creates a new <see cref="InfluxRecord"/> instance for the gauge value.
@@ -67,41 +65,65 @@ namespace Metrics.InfluxDB.Adapters
         /// <param name="value">The metric value object.</param>
         /// <returns>A list of <see cref="InfluxRecord"/> instances for the specified metric value.</returns>
         public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, Unit unit, CounterValue value)
-        {
-            var fields = new List<InfluxField>();
-            fields.Add(new InfluxField("Count", value.Count));
-
-            var setItemTags = new List<KeyValuePair<string,string>>();
-            foreach (var i in value.Items)
-            {
+		{
+			var setItems = new List<SetItem>();
+			foreach (var i in value.Items)
+			{
 				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var setItem = new SetItem(itemName);
 				var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
                 if (splits.Any())
                 {
-                    if (!splits[0].Contains("="))
+	                var notATag = !splits[0].Contains("=");
+					if (notATag)
                     {
                         itemName = splits[0];
-                    }
+						setItem.Name = itemName;
+					}
                     foreach (var split in splits)
                     {
                         var keyValuePair = Regex.Split(split, InfluxUtils.RegexUnescEqual).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
                         if (keyValuePair.Length > 1)
                         {
-                            setItemTags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
+							setItem.Tags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
                         }
                     }
                 }
-                fields.Add(new InfluxField(itemName + "_Count", i.Count));
-				fields.Add(new InfluxField(itemName + "_Percent", i.Percent));
-            }
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Count, i.Count));
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Percent, i.Percent));
+				setItems.Add(setItem);
+			}
+			
+			if (setItems.Count == 0 || setItems.Count > 1)
+			{
+				var tmpFields = new List<InfluxField>();
+				tmpFields.Add(new InfluxField("Count", value.Count));
+				var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
+				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
+			}
 
-			var jtags = InfluxUtils.JoinTags(GlobalTags, tags, setItemTags.ToArray());
-			var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key,f.Value));
-			yield return GetRecord(name, new MetricTags(itemTags), fields);
-        }
+	        var groupedTagCounts = SetItem.GetGroupedTagCounts(setItems);
+			foreach (var item in setItems)
+			{
+				var tmpFields = new List<InfluxField>();
+				foreach (var field in item.Fields)
+				{
+					tmpFields.Add(field);
+				}
 
-        /// <summary>
-        /// Creates a new <see cref="InfluxRecord"/> instance for the histogram value.
+				var key = item.GetTagIdentifier();
+				var count = setItems.Count == 1 ? value.Count : groupedTagCounts[key];
+				tmpFields.Add(new InfluxField("Item" + SetItem.Type.Count, count));
+
+				var jtags = InfluxUtils.JoinTags(GlobalTags, tags, item.Tags.ToArray());
+				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
+			}
+		}
+
+	    /// <summary>
+        /// Creates a new <see cref="InfluxRecord"/> instance for the meter value.
         /// </summary>
         /// <param name="name">The measurement name.</param>
         /// <param name="tags">Any additional tags to add to the <see cref="InfluxRecord"/>, these tags overwrite any global tags with the same name.</param>
@@ -112,44 +134,87 @@ namespace Metrics.InfluxDB.Adapters
         {
             if (value == null) throw new ArgumentNullException(nameof(value));
 
-            var fields = new List<InfluxField>();
-            fields.Add(new InfluxField("Count", value.Count));
-            fields.Add(new InfluxField("Mean Rate", value.MeanRate));
-            fields.Add(new InfluxField("1 Min Rate", value.OneMinuteRate));
-            fields.Add(new InfluxField("5 Min Rate", value.FiveMinuteRate));
-            fields.Add(new InfluxField("15 Min Rate", value.FifteenMinuteRate));
-            var setItemTags = new List<KeyValuePair<string, string>>();
+			var setItems = new List<SetItem>();
             foreach (var i in value.Items)
-            {
-                var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
-                var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
+			{
+				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
+				var setItem = new SetItem(itemName);
+				var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
                 if (splits.Any())
                 {
                     if (!splits[0].Contains("="))
                     {
                         itemName = splits[0];
+	                    setItem.Name = itemName;
                     }
                     foreach (var split in splits)
                     {
                         var keyValuePair = Regex.Split(split, InfluxUtils.RegexUnescEqual).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
                         if (keyValuePair.Length > 1)
                         {
-                            setItemTags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
+							setItem.Tags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
                         }
                     }
                 }
-                fields.Add(new InfluxField(itemName + "_Count", i.Value.Count));
-				fields.Add(new InfluxField(itemName + "_Percent", i.Percent));
-				fields.Add(new InfluxField(itemName + "_Mean Rate", i.Value.MeanRate));
-				fields.Add(new InfluxField(itemName + "_1 Min Rate", i.Value.OneMinuteRate));
-				fields.Add(new InfluxField(itemName + "_5 Min Rate", i.Value.FiveMinuteRate));
-				fields.Add(new InfluxField(itemName + "_15 Min Rate", i.Value.FifteenMinuteRate));
-            }
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Count, i.Value.Count));
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Percent, i.Percent));
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.MeanRate, i.Value.MeanRate));
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.OneMinRate, i.Value.OneMinuteRate));
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.FiveMinRate, i.Value.FiveMinuteRate));
+				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.FifteenMinRate, i.Value.FifteenMinuteRate));
+				setItems.Add(setItem);
+			}
 
-			var jtags = InfluxUtils.JoinTags(GlobalTags, tags, setItemTags.ToArray());
-			var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-			yield return GetRecord(name, new MetricTags(itemTags), fields);
-        }
+			if (setItems.Count == 0 || setItems.Count > 1)
+			{
+				var tmpFields = new List<InfluxField>();
+				tmpFields.Add(new InfluxField("Count", value.Count));
+				tmpFields.Add(new InfluxField("Mean Rate", value.MeanRate));
+				tmpFields.Add(new InfluxField("1 Min Rate", value.OneMinuteRate));
+				tmpFields.Add(new InfluxField("5 Min Rate", value.FiveMinuteRate));
+				tmpFields.Add(new InfluxField("15 Min Rate", value.FifteenMinuteRate));
+				var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
+				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
+			}
+
+		    var totalSetItems = setItems.GroupBy(s => s.Name).Count();
+			var groupedTagCounts = SetItem.GetGroupedTagCounts(setItems);
+			var groupedTagPercent = SetItem.GetGroupedTagPercentages(setItems);
+			var groupedTagMeanRate = SetItem.GetGroupedTagMeanRates(setItems);
+			var groupedTagOneMinuteRate = SetItem.GetGroupedTagOneMinuteRates(setItems);
+			var groupedTagFiveMinuteRate = SetItem.GetGroupedTagFiveMinuteRates(setItems);
+			var groupedTagFifteenMinuteRate = SetItem.GetGroupedTagFifteenMinuteRates(setItems);
+			foreach (var item in setItems)
+			{
+				var tmpFields = new List<InfluxField>();
+				foreach (var field in item.Fields)
+				{
+					tmpFields.Add(field);
+				}
+
+				var key = item.GetTagIdentifier();
+				var count = setItems.Count == 1 ? value.Count : groupedTagCounts[key];
+				var meanRate = setItems.Count == 1 ? value.MeanRate : groupedTagMeanRate[key] / totalSetItems;
+				var oneMinRate = setItems.Count == 1 ? value.OneMinuteRate : groupedTagOneMinuteRate[key] / totalSetItems;
+				var fiveMinRate = setItems.Count == 1 ? value.FiveMinuteRate : groupedTagFiveMinuteRate[key] / totalSetItems;
+				var fifteenMinRate = setItems.Count == 1 ? value.FifteenMinuteRate : groupedTagFifteenMinuteRate[key] / totalSetItems;
+
+				tmpFields.Add(new InfluxField("Item" + SetItem.Type.Count, count));
+				if (setItems.Count > 1)
+				{
+					tmpFields.Add(new InfluxField("Item" + SetItem.Type.Percent, groupedTagPercent[key]));
+				}
+				tmpFields.Add(new InfluxField("Item" + SetItem.Type.MeanRate, meanRate));
+				tmpFields.Add(new InfluxField("Item" + SetItem.Type.OneMinRate, oneMinRate));
+				tmpFields.Add(new InfluxField("Item" + SetItem.Type.FiveMinRate, fiveMinRate));
+				tmpFields.Add(new InfluxField("Item" + SetItem.Type.FifteenMinRate, fifteenMinRate));
+
+				var jtags = InfluxUtils.JoinTags(GlobalTags, tags, item.Tags.ToArray());
+				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
+			}
+		}
 
         /// <summary>
         /// Creates a new <see cref="InfluxRecord"/> instance for the histogram value.
@@ -221,38 +286,8 @@ namespace Metrics.InfluxDB.Adapters
             //fields.Add(new InfluxField("Last User Value",  value.Histogram.LastUserValue));
             //fields.Add(new InfluxField("Min User Value",   value.Histogram.MinUserValue));
             //fields.Add(new InfluxField("Max User Value",   value.Histogram.MaxUserValue));
-
-            // NOTE: I'm not sure if this is needed, it appears the timer only adds set item values
-            // to the histogram and not to the meter. I'm not sure if this is a bug or by design.
-            var setItemTags = new List<KeyValuePair<string,string>>();
-            foreach (var i in value.Rate.Items)
-            {
-                var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
-                var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                if (splits.Any())
-                {
-                    if (!splits[0].Contains("="))
-                    {
-                        itemName = splits[0];
-                    }
-                    foreach (var split in splits)
-                    {
-                        var keyValuePair = Regex.Split(split, InfluxUtils.RegexUnescEqual).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                        if (keyValuePair.Length > 1)
-                        {
-                            setItemTags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
-                        }
-                    }
-                }
-                fields.Add(new InfluxField(itemName + "_Count", i.Value.Count));
-				fields.Add(new InfluxField(itemName + "_Percent", i.Percent));
-				fields.Add(new InfluxField(itemName + "_Mean Rate", i.Value.MeanRate));
-				fields.Add(new InfluxField(itemName + "_1 Min Rate", i.Value.OneMinuteRate));
-				fields.Add(new InfluxField(itemName + "_5 Min Rate", i.Value.FiveMinuteRate));
-				fields.Add(new InfluxField(itemName + "_15 Min Rate", i.Value.FifteenMinuteRate));
-            }
             
-			var jtags = InfluxUtils.JoinTags(GlobalTags, tags, setItemTags.ToArray());
+			var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
 			var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
 			yield return GetRecord(name, new MetricTags(itemTags), fields);
         }
@@ -353,8 +388,91 @@ namespace Metrics.InfluxDB.Adapters
 			var jtags = InfluxUtils.JoinTags((string)null, GlobalTags, tags); // global tags must be first so they can get overridden
             var record = new InfluxRecord(name, jtags, fields, timestamp);
             return record;
-        }
-    }
+		}
+
+		private class SetItem
+		{
+			public string Name { get; set; }
+
+			public readonly List<KeyValuePair<string, string>> Tags = new List<KeyValuePair<string, string>>();
+
+			public readonly List<InfluxField> Fields = new List<InfluxField>();
+
+			public SetItem(string name)
+			{
+				this.Name = name;
+			}
+
+			public static class Type
+			{
+				public static string Count { get { return "_Count"; } }
+				public static string Percent { get { return "_Percent"; } }
+				public static string MeanRate { get { return "_Mean Rate"; } }
+				public static string OneMinRate { get { return "_1 Min Rate"; } }
+				public static string FiveMinRate { get { return "_5 Min Rate"; } }
+				public static string FifteenMinRate { get { return "_15 Min Rate"; } }
+			}
+
+			public static string GetTagIdentifier(SetItem item)
+			{
+				return MetricIdentifier.Calculate("", item.Tags.ToArray());
+			}
+
+			public string GetTagIdentifier()
+			{
+				return MetricIdentifier.Calculate("", this.Tags.ToArray());
+			}
+
+			public static Dictionary<string, double> GetGroupedTagCounts(IEnumerable<SetItem> setItems)
+			{
+				return GetGroupedTagRates(setItems, Type.Count);
+			}
+
+			public static Dictionary<string, double> GetGroupedTagPercentages(IEnumerable<SetItem> setItems)
+			{
+				return GetGroupedTagRates(setItems, Type.Percent);
+			}
+
+			public static Dictionary<string, double> GetGroupedTagMeanRates(IEnumerable<SetItem> setItems)
+			{
+				return GetGroupedTagRates(setItems, Type.MeanRate);
+			}
+
+			public static Dictionary<string, double> GetGroupedTagOneMinuteRates(IEnumerable<SetItem> setItems)
+			{
+				return GetGroupedTagRates(setItems, Type.OneMinRate);
+			}
+
+			public static Dictionary<string, double> GetGroupedTagFiveMinuteRates(IEnumerable<SetItem> setItems)
+			{
+				return GetGroupedTagRates(setItems, Type.FiveMinRate);
+			}
+
+			public static Dictionary<string, double> GetGroupedTagFifteenMinuteRates(IEnumerable<SetItem> setItems)
+			{
+				return GetGroupedTagRates(setItems, Type.FifteenMinRate);
+			}
+
+			private static Dictionary<string, double> GetGroupedTagRates(IEnumerable<SetItem> setItems, string type)
+			{
+				var tagValues = new Dictionary<string, double>();
+				foreach (var item in setItems)
+				{
+					var key = GetTagIdentifier(item);
+					var tmpValue = Convert.ToDouble(item.Fields.FirstOrDefault(v => v.Key.Contains(type)).Value);
+					if (tagValues.ContainsKey(key))
+					{
+						tagValues[key] += tmpValue;
+					}
+					else
+					{
+						tagValues.Add(key, tmpValue);
+					}
+				}
+				return tagValues;
+			}
+		}
+	}
 
     /// <summary>
     /// The default <see cref="InfluxdbConverter"/> implementation which is simply a concrete type that derives from
