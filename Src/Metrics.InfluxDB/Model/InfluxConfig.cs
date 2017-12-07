@@ -29,7 +29,7 @@ namespace Metrics.InfluxDB.Model
 
 			static Default() {
 				PortHttp = 8086;
-				Precision = InfluxPrecision.Seconds;
+				Precision = InfluxPrecision.Milliseconds;
 			}
 		}
 
