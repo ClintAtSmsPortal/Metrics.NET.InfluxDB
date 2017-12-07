@@ -228,7 +228,7 @@ namespace Metrics.InfluxDB.Adapters
 			static Default() {
 				ContextNameFormatter = (contextStack, contextName) => String.Join(".", contextStack.Concat(new[] { contextName }).Where(c => !String.IsNullOrWhiteSpace(c)));
 
-                MetricNameFormatter  = (context, name, unit, tags) => $"{context}.{name}".Trim(' ', '.');
+				MetricNameFormatter  = (context, name, unit, tags) => $"{context}.{name}".Trim(' ', '.');
 				TagKeyFormatter	  = key => key;
 				FieldKeyFormatter	= key => key;
 				ReplaceSpaceChar	 = "_";

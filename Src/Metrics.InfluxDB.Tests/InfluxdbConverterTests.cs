@@ -82,10 +82,10 @@ namespace Metrics.InfluxDB.Tests
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
 			var tags = new Dictionary<string,string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
 			var counter = context.Counter("testcnt", Unit.Bytes, tags);
 
 			counter.Increment();
@@ -106,11 +106,11 @@ namespace Metrics.InfluxDB.Tests
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
 			var tags = new Dictionary<string,string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
-            var counter = context.Counter("testcnt", Unit.Bytes, tags);
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+			var counter = context.Counter("testcnt", Unit.Bytes, tags);
 
 			counter.Increment("setItem");
 			metricsData = context.DataProvider.CurrentMetricsData;
@@ -130,12 +130,12 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("ctxt");
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
-		    var tags = new Dictionary<string, string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
-            var counter = context.Counter("testcnt", Unit.Bytes, tags);
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+			var counter = context.Counter("testcnt", Unit.Bytes, tags);
 
 			counter.Increment("setItem");
 			counter.Increment("setItem2", 3);
@@ -230,12 +230,12 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("ctxt");
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
-		    var tags = new Dictionary<string, string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
-            var meter = context.Meter("testmeter", Unit.Bytes, TimeUnit.Seconds, tags);
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+			var meter = context.Meter("testmeter", Unit.Bytes, TimeUnit.Seconds, tags);
 
 			meter.Mark();
 			metricsData = context.DataProvider.CurrentMetricsData;
@@ -255,12 +255,12 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("ctxt");
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
-		    var tags = new Dictionary<string, string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
-            var meter = context.Meter("testmeter", Unit.Bytes, TimeUnit.Seconds, tags);
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+			var meter = context.Meter("testmeter", Unit.Bytes, TimeUnit.Seconds, tags);
 
 			meter.Mark("setItem");
 			metricsData = context.DataProvider.CurrentMetricsData;
