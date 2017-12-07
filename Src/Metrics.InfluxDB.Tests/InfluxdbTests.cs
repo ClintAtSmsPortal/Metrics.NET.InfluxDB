@@ -125,14 +125,12 @@ namespace Metrics.InfluxDB.Tests
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().BeEmpty("Because running a report with no metrics should not result in any records.");
 
-			var tags = new[]
-			{
-				new KeyValuePair<string, string>("key1", "value1"),
-				new KeyValuePair<string, string>("tag2", ""),
-				new KeyValuePair<string, string>("tag3", ""),
-				new KeyValuePair<string, string>("key4", "value4"),
-			};
-			context.Gauge("test_gauge", () => 123.456, Unit.Bytes, tags);
+		    var tags = new Dictionary<string, string>();
+		    tags.Add("key1", "value1");
+		    tags.Add("tag2", "");
+		    tags.Add("tag3", "");
+		    tags.Add("key4", "value4");
+            context.Gauge("test_gauge", () => 123.456, Unit.Bytes, tags);
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(1);
@@ -149,13 +147,11 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var tags = new[]
-			{
-				new KeyValuePair<string, string>("key1", "value1"),
-				new KeyValuePair<string, string>("tag2", ""),
-				new KeyValuePair<string, string>("tag3", ""),
-				new KeyValuePair<string, string>("key4", "value4"),
-			};
+            var tags = new Dictionary<string,string>();
+		    tags.Add("key1", "value1");
+		    tags.Add("tag2", "");
+		    tags.Add("tag3", "");
+		    tags.Add("key4", "value4");
 			var counter = context.Counter("test_counter", Unit.Bytes, tags);
 
 			// add normally
@@ -171,8 +167,9 @@ namespace Metrics.InfluxDB.Tests
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
 			writer.LastBatch.Should().HaveCount(2);
-			
-			writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter.counter,key1=value1,key4=value4 item1_count=100i,item1_percent=25 {expTime}");
+
+            expTime = InfluxLineProtocol.FormatTimestamp(metricsData.Timestamp, precision);
+            writer.LastBatch[0].ToLineProtocol(precision).Should().Be($@"testcontext.test_counter.counter,key1=value1,key4=value4 item1_count=100i,item1_percent=25 {expTime}");
 		}
 
 		[Fact]
@@ -183,13 +180,12 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var tags = new[]
-			{
-				new KeyValuePair<string, string>("key1", "value1"),
-				new KeyValuePair<string, string>("tag2", ""),
-				new KeyValuePair<string, string>("tag3", ""),
-				new KeyValuePair<string, string>("key4", "value4"),
-			};
+		    var tags =new Dictionary<string, string>();
+		    tags.Add("key1", "value1");
+		    tags.Add("tag2", "");
+		    tags.Add("tag3", "");
+		    tags.Add("key4", "value4");
+
 			var meter = context.Meter("test_meter", Unit.Bytes, TimeUnit.Seconds, tags);
 
 			// add normally
@@ -221,14 +217,13 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var tags = new[]
-			{
-				new KeyValuePair<string, string>("key1", "value1"),
-				new KeyValuePair<string, string>("tag2", ""),
-				new KeyValuePair<string, string>("tag3", ""),
-				new KeyValuePair<string, string>("key4", "value4"),
-			};
-			var hist = context.Histogram("test_hist", Unit.Bytes, SamplingType.Default, tags);
+            var tags = new Dictionary<string, string>();
+            tags.Add("key1", "value1");
+            tags.Add("tag2", "");
+            tags.Add("tag3", "");
+            tags.Add("key4", "value4");
+
+            var hist = context.Histogram("test_hist", Unit.Bytes, SamplingType.Default, tags);
 
 			// add normally
 			hist.Update(300);
@@ -257,13 +252,12 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var tags = new[]
-			{
-				new KeyValuePair<string, string>("key1", "value1"),
-				new KeyValuePair<string, string>("tag2", ""),
-				new KeyValuePair<string, string>("tag3", ""),
-				new KeyValuePair<string, string>("key4", "value4"),
-			};
+			var tags = new Dictionary<string,string>();
+		    tags.Add("key1", "value1");
+		    tags.Add("tag2", "");
+		    tags.Add("tag3", "");
+		    tags.Add("key4", "value4");
+
 			var timer = context.Timer("test_timer", Unit.Bytes, SamplingType.Default, TimeUnit.Seconds, TimeUnit.Seconds, tags);
 
 			// add normally
@@ -298,12 +292,19 @@ namespace Metrics.InfluxDB.Tests
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
-			HealthChecks.UnregisterAllHealthChecks();
+            var tempTags3 = new Dictionary<string,string>();
+            tempTags3.Add("tag3", "key3");
+            var tempTags4 = new Dictionary<string, string>();
+            tempTags4.Add("tag 4", "key 4");
+            var tempTags5 = new Dictionary<string, string>();
+            tempTags5.Add("tag5", "key5");
+
+            HealthChecks.UnregisterAllHealthChecks();
 			HealthChecks.RegisterHealthCheck("Health Check 1", () => HealthCheckResult.Healthy($"Healthy check!"));
 			HealthChecks.RegisterHealthCheck("Health Check 2", () => HealthCheckResult.Unhealthy($"Unhealthy check!"));
-			HealthChecks.RegisterHealthCheck("Health Check 3",      () => HealthCheckResult.Healthy($"Healthy check!"), new KeyValuePair<string, string>("tag3", "key3"));
-			HealthChecks.RegisterHealthCheck("Health Check 4",    () => HealthCheckResult.Healthy($"Healthy check!"), new KeyValuePair<string, string>("tag 4", "key 4"));
-			HealthChecks.RegisterHealthCheck("Name=Health Check 5", () => HealthCheckResult.Healthy($"Healthy check!"), new KeyValuePair<string, string>("tag5", "key5"));
+		    HealthChecks.RegisterHealthCheck("Health Check 3", () => HealthCheckResult.Healthy($"Healthy check!"), tempTags3);
+            HealthChecks.RegisterHealthCheck("Health Check 4",    () => HealthCheckResult.Healthy($"Healthy check!"), tempTags4);
+			HealthChecks.RegisterHealthCheck("Name=Health Check 5", () => HealthCheckResult.Healthy($"Healthy check!"), tempTags5);
 
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, () => HealthChecks.GetStatus(), CancellationToken.None);

@@ -83,14 +83,14 @@ namespace Metrics.InfluxDB.Adapters
 					tmpFields.Add(field);
 				}
 				var tmpJtags = InfluxUtils.JoinTags(GlobalTags, tags);
-				var tmpItemTags = tmpJtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				var tmpItemTags = tmpJtags.ToDictionary(t=>t.Key,t=>t.Value);
 				yield return GetRecord(name, new MetricTags(tmpItemTags), tmpFields);
 			}
 			
 		    var fields = new List<InfluxField>();
 		    fields.Add(new InfluxField("Count", value.Count));
 		    var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
-		    var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+		    var itemTags = jtags.ToDictionary(t => t.Key, t => t.Value);
 		    yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
@@ -128,7 +128,7 @@ namespace Metrics.InfluxDB.Adapters
 					tmpFields.Add(field);
 				}
 				var tmpJtags = InfluxUtils.JoinTags(GlobalTags, tags);
-				var tmpItemTags = tmpJtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				var tmpItemTags = tmpJtags.ToDictionary(t => t.Key, t => t.Value);
 				yield return GetRecord(name, new MetricTags(tmpItemTags), tmpFields);
 			}
 
@@ -139,7 +139,7 @@ namespace Metrics.InfluxDB.Adapters
 			fields.Add(new InfluxField("5 Min Rate", value.FiveMinuteRate));
 			fields.Add(new InfluxField("15 Min Rate", value.FifteenMinuteRate));
 			var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
-			var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+			var itemTags = jtags.ToDictionary(t => t.Key, t => t.Value);
 			yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
@@ -216,7 +216,7 @@ namespace Metrics.InfluxDB.Adapters
             //fields.Add(new InfluxField("Max User Value",   value.Histogram.MaxUserValue));
             
 			var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
-			var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+			var itemTags = jtags.ToDictionary(t => t.Key, t => t.Value);
 			yield return GetRecord(name, new MetricTags(itemTags), fields);
         }
 
@@ -231,19 +231,19 @@ namespace Metrics.InfluxDB.Adapters
             foreach (var result in status.Results)
 			{
 				var itemName = string.IsNullOrWhiteSpace(result.Name) ? string.Empty : result.Name;
-				KeyValuePair<string, string> nameTag;
+				Dictionary<string,string> nameTag = new Dictionary<string, string>();
 				if (!Regex.IsMatch(itemName, "^[Nn]ame="))
 				{
-					nameTag = new KeyValuePair<string, string>("name", InfluxUtils.LowerAndReplaceSpaces(itemName));
+					nameTag.Add("name", InfluxUtils.LowerAndReplaceSpaces(itemName));
 				}
 				else
 				{
-					nameTag = new KeyValuePair<string, string>("name", InfluxUtils.LowerAndReplaceSpaces(itemName.Substring(5)));
+				    nameTag.Add("name", InfluxUtils.LowerAndReplaceSpaces(itemName.Substring(5)));
 				}
 
 				var jtags = InfluxUtils.JoinTags(GlobalTags, result.Tags, nameTag);
-				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-				yield return GetRecord("Health Checks", itemTags.ToArray(), new[] {
+				var itemTags = jtags.ToDictionary(t=> t.Key,t=> t.Value);
+				yield return GetRecord("Health Checks", itemTags, new[] {
 					new InfluxField("IsHealthy", result.Check.IsHealthy),
 					new InfluxField("Message",   result.Check.Message)
 				});

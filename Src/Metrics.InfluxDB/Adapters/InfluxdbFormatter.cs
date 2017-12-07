@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
 using Metrics.InfluxDB.Model;
 
 namespace Metrics.InfluxDB.Adapters
@@ -35,7 +33,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="unit">The metric units.</param>
 		/// <param name="tags">The metric tags.</param>
 		/// <returns>The formatted metric name.</returns>
-		public delegate String MetricFormatterDelegate(String context, String name, Unit unit, KeyValuePair<string,string>[] tags);
+		public delegate String MetricFormatterDelegate(String context, String name, Unit unit, Dictionary<string,string> tags);
 
 		/// <summary>
 		/// The delegate used for formatting tag key names.
@@ -132,7 +130,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <param name="unit">The metric units.</param>
 		/// <param name="tags">The metric tags.</param>
 		/// <returns>The metric name after applying the formatters and transformations, or null if the <see cref="MetricNameFormatter"/> is not set.</returns>
-		public virtual string FormatMetricName(string context, string name, Unit unit, KeyValuePair<string,string>[] tags) {
+		public virtual string FormatMetricName(string context, string name, Unit unit, Dictionary<string,string> tags) {
 			var value = MetricNameFormatter?.Invoke(context, name, unit, tags);
 			if (value == null) return null; // return null so that caller knows that it can call its own default implementation if it has one
 			return InfluxUtils.LowerAndReplaceSpaces(value, LowercaseNames, ReplaceSpaceChar);

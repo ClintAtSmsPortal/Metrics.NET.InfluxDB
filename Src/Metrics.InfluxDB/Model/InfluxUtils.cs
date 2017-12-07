@@ -125,7 +125,8 @@ namespace Metrics.InfluxDB.Model
         {
             // if there's only one item and it's not a key/value pair, alter it to use "Name" as the key and itself as the value
             var name = itemName ?? string.Empty;
-            var nameTag = new[]{ new KeyValuePair<string, string>("Name", name) };
+            var nameTag = new Dictionary<string,string>();
+            nameTag.Add("Name", name);
             var retTags = ToInfluxTags(tags).Concat(ToInfluxTags(nameTag));
             return retTags.GroupBy(t => t.Key).Select(g => g.Last()); // this is similar to: retTags.DistinctBy(t => t.Key), but takes the last value instead so global tags get overriden by later tags
         }
