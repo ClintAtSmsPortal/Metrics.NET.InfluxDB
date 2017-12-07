@@ -245,18 +245,19 @@ namespace Metrics.InfluxDB.Tests
 		}
 
 		[Fact]
-		public void InfluxReport_CanAddRecords_ForTimer() {
+		public void InfluxReport_CanAddRecords_ForTimer()
+		{
 			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
 			var report = new InfluxdbHttpReport(config);
 			var context = new DefaultMetricsContext("TestContext");
 			var precision = config.Precision ?? InfluxConfig.Default.Precision;
 			var metricsData = context.DataProvider.CurrentMetricsData;
-			var tags = new Dictionary<string,string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
 
 			var timer = context.Timer("test_timer", Unit.Bytes, SamplingType.Default, TimeUnit.Seconds, TimeUnit.Seconds, tags);
 
@@ -281,6 +282,41 @@ namespace Metrics.InfluxDB.Tests
 			lastBatch.Should().Contain(",1_min_rate=0,5_min_rate=0,15_min_rate=0,last=50,min=50,mean=");
 			lastBatch.Should().Contain(",max=100,stddev=");
 			lastBatch.Should().EndWith($",median=100,sample_size=2i,percentile_75%=100,percentile_95%=100,percentile_98%=100,percentile_99%=100,percentile_99.9%=100 {expTime}");
+		}
+
+		[Fact]
+		public void InfluxReport_CanAddRecords_ForEvent()
+		{
+			var config = new InfluxConfig(mockUri, "testdb");
+			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
+			var report = new InfluxdbHttpReport(config);
+			var context = new DefaultMetricsContext("TestContext");
+			var precision = config.Precision ?? InfluxConfig.Default.Precision;
+			var metricsData = context.DataProvider.CurrentMetricsData;
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+
+			var evnt = context.Event("test_evnt", tags);
+
+			var fields = new Dictionary<string, object>();
+			fields.Add("stringTag", "abc");
+			fields.Add("intTag", 10);
+			fields.Add("longTag", 10l);
+			fields.Add("doubleTag", 10.1d);
+			fields.Add("floatTag", 1.0f);
+			fields.Add("decimalTag", 12.0m);
+			fields.Add("byteTag", (byte)11);
+			fields.Add("boolTag", true);
+
+			evnt.Record(fields);
+			metricsData = context.DataProvider.CurrentMetricsData;
+			report.RunReport(metricsData, hsFunc, CancellationToken.None);
+			writer.LastBatch.Should().HaveCount(1);
+
+			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith("testcontext.test_evnt.event,key1=value1,key4=value4 stringtag=\"abc\",inttag=10i,longtag=10i,doubletag=10.1,floattag=1,decimaltag=12,bytetag=11i,booltag=True");
 		}
 
 		[Fact]

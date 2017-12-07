@@ -283,12 +283,12 @@ namespace Metrics.InfluxDB.Tests
 			var context = new DefaultMetricsContext("ctxt");
 			var metricsData = context.DataProvider.CurrentMetricsData;
 
-		    var tags = new Dictionary<string, string>();
-		    tags.Add("key1", "value1");
-		    tags.Add("tag2", "");
-		    tags.Add("tag3", "");
-		    tags.Add("key4", "value4");
-            var meter = context.Meter("testmeter", Unit.Bytes, TimeUnit.Seconds, tags);
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+			var meter = context.Meter("testmeter", Unit.Bytes, TimeUnit.Seconds, tags);
 
 			meter.Mark("setItem");
 			meter.Mark("setItem2", 3);
@@ -297,7 +297,7 @@ namespace Metrics.InfluxDB.Tests
 
 			var records = converter.GetRecords("testmeter", tags, Unit.None, meterSrc.Value).ToList();
 			records.Count().Should().Be(3);
-			
+
 			records[0].ToLineProtocol().Should().StartWith(@"testmeter,key1=value1,key4=value4 setItem_Count=1i,setItem_Percent=25,setItem_Mean\ Rate=");
 			records[0].ToLineProtocol().Should().Contain(@",setItem_1\ Min\ Rate=0,setItem_5\ Min\ Rate=0,setItem_15\ Min\ Rate=0 ");
 
@@ -306,6 +306,30 @@ namespace Metrics.InfluxDB.Tests
 
 			records[2].ToLineProtocol().Should().StartWith(@"testmeter,key1=value1,key4=value4 Count=4i,Mean\ Rate=");
 			records[2].ToLineProtocol().Should().Contain(@",1\ Min\ Rate=0,5\ Min\ Rate=0,15\ Min\ Rate=0 ");
+		}
+
+		[Fact]
+		public void GetRecordsForEvent_WhenNoFieldSpecified_UsesDefaultTimestampAsField()
+		{
+			var converter = new DefaultConverter(); converter.Timestamp = DateTime.UtcNow;
+			var context = new DefaultMetricsContext("ctxt");
+			var metricsData = context.DataProvider.CurrentMetricsData;
+
+			var tags = new Dictionary<string, string>();
+			tags.Add("key1", "value1");
+			tags.Add("tag2", "");
+			tags.Add("tag3", "");
+			tags.Add("key4", "value4");
+			var evnt = context.Event("testevnt", tags);
+
+			evnt.Record();
+			metricsData = context.DataProvider.CurrentMetricsData;
+			var evntSrc = metricsData.Events.First();
+
+			var records = converter.GetRecords("testevnt", tags, evntSrc.Value).ToList();
+			records.Count().Should().Be(1);
+
+			records[0].ToLineProtocol().Should().StartWith("testevnt,key1=value1,key4=value4 timestamp=");
 		}
 	}
 }
