@@ -74,6 +74,7 @@
     <Compile Include="..\..\SharedAssemblyInfo.cs">
       <Link>Properties\SharedAssemblyInfo.cs</Link>
     </Compile>
+    <Compile Include="InfluxdbConverterTests.cs" />
     <Compile Include="InfluxdbTests.cs" />
     <Compile Include="InfluxdbTestUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

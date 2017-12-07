@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Metrics.Core;
 using Metrics.MetricData;
 using Metrics.InfluxDB.Model;
 
@@ -71,39 +70,11 @@ namespace Metrics.InfluxDB.Adapters
 			{
 				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
 				var setItem = new SetItem(itemName);
-				var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                if (splits.Any())
-                {
-	                var notATag = !splits[0].Contains("=");
-					if (notATag)
-                    {
-                        itemName = splits[0];
-						setItem.Name = itemName;
-					}
-                    foreach (var split in splits)
-                    {
-                        var keyValuePair = Regex.Split(split, InfluxUtils.RegexUnescEqual).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                        if (keyValuePair.Length > 1)
-                        {
-							setItem.Tags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
-                        }
-                    }
-                }
 				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Count, i.Count));
 				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Percent, i.Percent));
 				setItems.Add(setItem);
 			}
 			
-			if (setItems.Count == 0 || setItems.Count > 1)
-			{
-				var tmpFields = new List<InfluxField>();
-				tmpFields.Add(new InfluxField("Count", value.Count));
-				var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
-				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
-			}
-
-	        var groupedTagCounts = SetItem.GetGroupedTagCounts(setItems);
 			foreach (var item in setItems)
 			{
 				var tmpFields = new List<InfluxField>();
@@ -111,15 +82,16 @@ namespace Metrics.InfluxDB.Adapters
 				{
 					tmpFields.Add(field);
 				}
-
-				var key = item.GetTagIdentifier();
-				var count = setItems.Count == 1 ? value.Count : groupedTagCounts[key];
-				tmpFields.Add(new InfluxField("Item" + SetItem.Type.Count, count));
-
-				var jtags = InfluxUtils.JoinTags(GlobalTags, tags, item.Tags.ToArray());
-				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
+				var tmpJtags = InfluxUtils.JoinTags(GlobalTags, tags);
+				var tmpItemTags = tmpJtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord(name, new MetricTags(tmpItemTags), tmpFields);
 			}
+			
+		    var fields = new List<InfluxField>();
+		    fields.Add(new InfluxField("Count", value.Count));
+		    var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
+		    var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+		    yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
 	    /// <summary>
@@ -139,23 +111,6 @@ namespace Metrics.InfluxDB.Adapters
 			{
 				var itemName = string.IsNullOrWhiteSpace(i.Item) ? string.Empty : i.Item;
 				var setItem = new SetItem(itemName);
-				var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                if (splits.Any())
-                {
-                    if (!splits[0].Contains("="))
-                    {
-                        itemName = splits[0];
-	                    setItem.Name = itemName;
-                    }
-                    foreach (var split in splits)
-                    {
-                        var keyValuePair = Regex.Split(split, InfluxUtils.RegexUnescEqual).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                        if (keyValuePair.Length > 1)
-                        {
-							setItem.Tags.Add(new KeyValuePair<string, string>(keyValuePair[0], keyValuePair[1]));
-                        }
-                    }
-                }
 				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Count, i.Value.Count));
 				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.Percent, i.Percent));
 				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.MeanRate, i.Value.MeanRate));
@@ -164,27 +119,7 @@ namespace Metrics.InfluxDB.Adapters
 				setItem.Fields.Add(new InfluxField(itemName + SetItem.Type.FifteenMinRate, i.Value.FifteenMinuteRate));
 				setItems.Add(setItem);
 			}
-
-			if (setItems.Count == 0 || setItems.Count > 1)
-			{
-				var tmpFields = new List<InfluxField>();
-				tmpFields.Add(new InfluxField("Count", value.Count));
-				tmpFields.Add(new InfluxField("Mean Rate", value.MeanRate));
-				tmpFields.Add(new InfluxField("1 Min Rate", value.OneMinuteRate));
-				tmpFields.Add(new InfluxField("5 Min Rate", value.FiveMinuteRate));
-				tmpFields.Add(new InfluxField("15 Min Rate", value.FifteenMinuteRate));
-				var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
-				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
-			}
-
-		    var totalSetItems = setItems.GroupBy(s => s.Name).Count();
-			var groupedTagCounts = SetItem.GetGroupedTagCounts(setItems);
-			var groupedTagPercent = SetItem.GetGroupedTagPercentages(setItems);
-			var groupedTagMeanRate = SetItem.GetGroupedTagMeanRates(setItems);
-			var groupedTagOneMinuteRate = SetItem.GetGroupedTagOneMinuteRates(setItems);
-			var groupedTagFiveMinuteRate = SetItem.GetGroupedTagFiveMinuteRates(setItems);
-			var groupedTagFifteenMinuteRate = SetItem.GetGroupedTagFifteenMinuteRates(setItems);
+			
 			foreach (var item in setItems)
 			{
 				var tmpFields = new List<InfluxField>();
@@ -192,28 +127,20 @@ namespace Metrics.InfluxDB.Adapters
 				{
 					tmpFields.Add(field);
 				}
-
-				var key = item.GetTagIdentifier();
-				var count = setItems.Count == 1 ? value.Count : groupedTagCounts[key];
-				var meanRate = setItems.Count == 1 ? value.MeanRate : groupedTagMeanRate[key] / totalSetItems;
-				var oneMinRate = setItems.Count == 1 ? value.OneMinuteRate : groupedTagOneMinuteRate[key] / totalSetItems;
-				var fiveMinRate = setItems.Count == 1 ? value.FiveMinuteRate : groupedTagFiveMinuteRate[key] / totalSetItems;
-				var fifteenMinRate = setItems.Count == 1 ? value.FifteenMinuteRate : groupedTagFifteenMinuteRate[key] / totalSetItems;
-
-				tmpFields.Add(new InfluxField("Item" + SetItem.Type.Count, count));
-				if (setItems.Count > 1)
-				{
-					tmpFields.Add(new InfluxField("Item" + SetItem.Type.Percent, groupedTagPercent[key]));
-				}
-				tmpFields.Add(new InfluxField("Item" + SetItem.Type.MeanRate, meanRate));
-				tmpFields.Add(new InfluxField("Item" + SetItem.Type.OneMinRate, oneMinRate));
-				tmpFields.Add(new InfluxField("Item" + SetItem.Type.FiveMinRate, fiveMinRate));
-				tmpFields.Add(new InfluxField("Item" + SetItem.Type.FifteenMinRate, fifteenMinRate));
-
-				var jtags = InfluxUtils.JoinTags(GlobalTags, tags, item.Tags.ToArray());
-				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-				yield return GetRecord(name, new MetricTags(itemTags), tmpFields);
+				var tmpJtags = InfluxUtils.JoinTags(GlobalTags, tags);
+				var tmpItemTags = tmpJtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord(name, new MetricTags(tmpItemTags), tmpFields);
 			}
+
+			var fields = new List<InfluxField>();
+			fields.Add(new InfluxField("Count", value.Count));
+			fields.Add(new InfluxField("Mean Rate", value.MeanRate));
+			fields.Add(new InfluxField("1 Min Rate", value.OneMinuteRate));
+			fields.Add(new InfluxField("5 Min Rate", value.FiveMinuteRate));
+			fields.Add(new InfluxField("15 Min Rate", value.FifteenMinuteRate));
+			var jtags = InfluxUtils.JoinTags(GlobalTags, tags);
+			var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+			yield return GetRecord(name, new MetricTags(itemTags), fields);
 		}
 
         /// <summary>
@@ -276,6 +203,7 @@ namespace Metrics.InfluxDB.Adapters
             fields.Add(new InfluxField("Max", value.Histogram.Max));
             fields.Add(new InfluxField("StdDev", value.Histogram.StdDev));
             fields.Add(new InfluxField("Median", value.Histogram.Median));
+
             fields.Add(new InfluxField("Sample Size", value.Histogram.SampleSize));
             fields.Add(new InfluxField("Percentile 75%", value.Histogram.Percentile75));
             fields.Add(new InfluxField("Percentile 95%", value.Histogram.Percentile95));
@@ -301,28 +229,24 @@ namespace Metrics.InfluxDB.Adapters
         {
             var setItemTags = new List<KeyValuePair<string, string>>();
             foreach (var result in status.Results)
-            {
-                var itemName = string.IsNullOrWhiteSpace(result.Name) ? string.Empty : result.Name;
-				
-                var splits = Regex.Split(itemName, InfluxUtils.RegexUnescComma).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                if (splits.Any())
-                {
-                    if (!Regex.IsMatch(splits[0], "^[Nn]ame=")) splits[0] = $"Name={InfluxUtils.LowerAndReplaceSpaces(splits[0])}";
-                    foreach (var split in splits)
-                    {
-                        var keyValuePair = Regex.Split(split, InfluxUtils.RegexUnescEqual).Select(t => t.Trim()).Where(t => t.Length > 0).ToArray();
-                        if (keyValuePair.Length > 1)
-                        {
-                            setItemTags.Add(new KeyValuePair<string, string>(keyValuePair[0], InfluxUtils.LowerAndReplaceSpaces(keyValuePair[1])));
-                        }
-                    }
-                }
-                var jtags = InfluxUtils.JoinTags(GlobalTags, result.Tags, setItemTags.ToArray());
-                var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
-                yield return GetRecord("Health Checks", itemTags.ToArray(), new[] {
-                    new InfluxField("IsHealthy", result.Check.IsHealthy),
-                    new InfluxField("Message",   result.Check.Message)
-                });
+			{
+				var itemName = string.IsNullOrWhiteSpace(result.Name) ? string.Empty : result.Name;
+				KeyValuePair<string, string> nameTag;
+				if (!Regex.IsMatch(itemName, "^[Nn]ame="))
+				{
+					nameTag = new KeyValuePair<string, string>("name", InfluxUtils.LowerAndReplaceSpaces(itemName));
+				}
+				else
+				{
+					nameTag = new KeyValuePair<string, string>("name", InfluxUtils.LowerAndReplaceSpaces(itemName.Substring(5)));
+				}
+
+				var jtags = InfluxUtils.JoinTags(GlobalTags, result.Tags, nameTag);
+				var itemTags = jtags.Select(f => new KeyValuePair<string, string>(f.Key, f.Value));
+				yield return GetRecord("Health Checks", itemTags.ToArray(), new[] {
+					new InfluxField("IsHealthy", result.Check.IsHealthy),
+					new InfluxField("Message",   result.Check.Message)
+				});
             }
         }
 
@@ -340,7 +264,7 @@ namespace Metrics.InfluxDB.Adapters
             {
                 foreach (var kvp in evntArgs.Fields)
                 {
-                    fields.Add(new InfluxField(kvp.Key, kvp.Value.ToString()));
+                    fields.Add(new InfluxField(kvp.Key, kvp.Value));
                 }
                 yield return GetRecord(name, tags, fields, evntArgs.Timestamp);
             }
@@ -394,8 +318,6 @@ namespace Metrics.InfluxDB.Adapters
 		{
 			public string Name { get; set; }
 
-			public readonly List<KeyValuePair<string, string>> Tags = new List<KeyValuePair<string, string>>();
-
 			public readonly List<InfluxField> Fields = new List<InfluxField>();
 
 			public SetItem(string name)
@@ -411,65 +333,6 @@ namespace Metrics.InfluxDB.Adapters
 				public static string OneMinRate { get { return "_1 Min Rate"; } }
 				public static string FiveMinRate { get { return "_5 Min Rate"; } }
 				public static string FifteenMinRate { get { return "_15 Min Rate"; } }
-			}
-
-			public static string GetTagIdentifier(SetItem item)
-			{
-				return MetricIdentifier.Calculate("", item.Tags.ToArray());
-			}
-
-			public string GetTagIdentifier()
-			{
-				return MetricIdentifier.Calculate("", this.Tags.ToArray());
-			}
-
-			public static Dictionary<string, double> GetGroupedTagCounts(IEnumerable<SetItem> setItems)
-			{
-				return GetGroupedTagRates(setItems, Type.Count);
-			}
-
-			public static Dictionary<string, double> GetGroupedTagPercentages(IEnumerable<SetItem> setItems)
-			{
-				return GetGroupedTagRates(setItems, Type.Percent);
-			}
-
-			public static Dictionary<string, double> GetGroupedTagMeanRates(IEnumerable<SetItem> setItems)
-			{
-				return GetGroupedTagRates(setItems, Type.MeanRate);
-			}
-
-			public static Dictionary<string, double> GetGroupedTagOneMinuteRates(IEnumerable<SetItem> setItems)
-			{
-				return GetGroupedTagRates(setItems, Type.OneMinRate);
-			}
-
-			public static Dictionary<string, double> GetGroupedTagFiveMinuteRates(IEnumerable<SetItem> setItems)
-			{
-				return GetGroupedTagRates(setItems, Type.FiveMinRate);
-			}
-
-			public static Dictionary<string, double> GetGroupedTagFifteenMinuteRates(IEnumerable<SetItem> setItems)
-			{
-				return GetGroupedTagRates(setItems, Type.FifteenMinRate);
-			}
-
-			private static Dictionary<string, double> GetGroupedTagRates(IEnumerable<SetItem> setItems, string type)
-			{
-				var tagValues = new Dictionary<string, double>();
-				foreach (var item in setItems)
-				{
-					var key = GetTagIdentifier(item);
-					var tmpValue = Convert.ToDouble(item.Fields.FirstOrDefault(v => v.Key.Contains(type)).Value);
-					if (tagValues.ContainsKey(key))
-					{
-						tagValues[key] += tmpValue;
-					}
-					else
-					{
-						tagValues.Add(key, tmpValue);
-					}
-				}
-				return tagValues;
 			}
 		}
 	}
