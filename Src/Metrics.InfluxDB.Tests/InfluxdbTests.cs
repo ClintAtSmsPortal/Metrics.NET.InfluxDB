@@ -209,7 +209,7 @@ namespace Metrics.InfluxDB.Tests
 			lastBatch.Should().EndWith($@",item1_1_min_rate=0,item1_5_min_rate=0,item1_15_min_rate=0 {expTime}");
 		}
 
-        [Fact]
+	    [Fact]
 		public void InfluxReport_CanAddRecords_ForHistogram() {
 			var config = new InfluxConfig(mockUri, "testdb");
 			var writer = new InfluxdbTestWriter(config); config.Writer = writer;
