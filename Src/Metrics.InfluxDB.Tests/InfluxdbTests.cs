@@ -310,13 +310,18 @@ namespace Metrics.InfluxDB.Tests
 			fields.Add("decimalTag", 12.0m);
 			fields.Add("byteTag", (byte)11);
 			fields.Add("boolTag", true);
-
 			evnt.Record(fields);
+
+			fields = new Dictionary<string, object>();
+			fields.Add("stringTag", "xyz");
+			evnt.Record(fields);
+
 			metricsData = context.DataProvider.CurrentMetricsData;
 			report.RunReport(metricsData, hsFunc, CancellationToken.None);
-			writer.LastBatch.Should().HaveCount(1);
+			writer.LastBatch.Should().HaveCount(2);
 
 			writer.LastBatch[0].ToLineProtocol(precision).Should().StartWith("testcontext.test_evnt.event,key1=value1,key4=value4 stringtag=\"abc\",inttag=10i,longtag=10i,doubletag=10.1,floattag=1,decimaltag=12,bytetag=11i,booltag=True");
+			writer.LastBatch[1].ToLineProtocol(precision).Should().StartWith("testcontext.test_evnt.event,key1=value1,key4=value4 stringtag=\"xyz\"");
 		}
 
 		[Fact]
