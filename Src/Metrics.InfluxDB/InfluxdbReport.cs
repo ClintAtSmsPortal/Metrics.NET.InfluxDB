@@ -217,7 +217,7 @@ namespace Metrics.InfluxDB
 		protected override void ReportEvent(string name, EventValue value, MetricTags tags)
 		{
 			var itemColumns = new List<string>();
-			foreach (var evntArgs in value.EventsCopy)
+			foreach (var evntArgs in value.Events)
 			{
 				itemColumns.Add("Timestamp");
 				foreach (var kvp in evntArgs.Fields)
@@ -227,7 +227,7 @@ namespace Metrics.InfluxDB
 			}
 
 			var itemValues = new List<JsonValue>();
-			foreach (var evntArgs in value.EventsCopy)
+			foreach (var evntArgs in value.Events)
 			{
 				itemValues.Add(Value(evntArgs.Timestamp.ToString()));
 				foreach (var kvp in evntArgs.Fields)

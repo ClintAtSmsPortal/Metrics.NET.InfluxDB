@@ -39,8 +39,9 @@
       <HintPath>..\..\packages\ConcurrencyUtils.0.1.4\lib\net45\ConcurrencyUtilities.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Metrics, Version=1.0.0.14, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\Metrics.1.0.0.14\lib\net45\Metrics.dll</HintPath>
+    <Reference Include="Metrics, Version=1.0.3.17, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\MetricsDotNetFork\packages\Metrics.1.0.3.17\lib\net45\Metrics.dll</HintPath>
+      <Private>True</Private>
     </Reference>
     <Reference Include="System" />
   </ItemGroup>
