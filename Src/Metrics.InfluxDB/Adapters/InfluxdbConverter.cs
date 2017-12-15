@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Metrics.MetricData;
 using Metrics.InfluxDB.Model;
+using Metrics.MetricData;
 
 namespace Metrics.InfluxDB.Adapters
 {
@@ -259,7 +259,7 @@ namespace Metrics.InfluxDB.Adapters
 		/// <returns>A list of <see cref="InfluxRecord"/> instances for the specified metric value.</returns>
 		public IEnumerable<InfluxRecord> GetRecords(String name, MetricTags tags, EventValue value)
 		{
-			foreach (var evntArgs in value.EventsCopy)
+			foreach (var evntArgs in value.Events)
 			{
 				var fields = new List<InfluxField>();
 				foreach (var kvp in evntArgs.Fields)
